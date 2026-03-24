@@ -98,7 +98,7 @@ struct DashboardView: View {
 }
 
 struct AuditRow: View {
-    let audit: Audit
+    let audit: AuditSummary
     let isSelected: Bool
     let onToggleSelection: () -> Void
     
