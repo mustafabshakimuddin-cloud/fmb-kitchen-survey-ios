@@ -28,6 +28,7 @@ class SurveyStore: ObservableObject {
     func startNewAudit(metadata: AuditMetadata) {
         // In a real app, we'd call a 'create' endpoint. 
         // For now, let's assume we create a local draft and 'save' it.
+        let now = ISO8601DateFormatter().string(from: Date())
         let newAudit = Audit(
             id: UUID().uuidString,
             userId: userId,
@@ -35,8 +36,8 @@ class SurveyStore: ObservableObject {
             answers: [:],
             progress: 0,
             status: "draft",
-            createdAt: Date(),
-            updatedAt: Date(),
+            createdAt: now,
+            updatedAt: now,
             pdfUrl: nil
         )
         currentAudit = newAudit
