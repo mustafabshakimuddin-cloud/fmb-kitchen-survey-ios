@@ -11,13 +11,171 @@ class SurveyStore: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: Error?
     
+    // Auto-save state
+    @Published var isSaving: Bool = false
+    @Published var activeUploads: Int = 0
+    
+    // Validation
+    @Published var validationError: String? = nil
+    @Published var isSubmitting: Bool = false
+    
+    // Admin state
     @Published var isAdmin: Bool = UserDefaults.standard.bool(forKey: "fmb_audit_isAdmin") {
         didSet { UserDefaults.standard.set(isAdmin, forKey: "fmb_audit_isAdmin") }
     }
     @Published var adminReports: [AuditSummary] = []
+    @Published var adminPage: Int = 1
+    @Published var adminHasMore: Bool = false
+    @Published var adminIsLoadingMore: Bool = false
+    
+    // Admin detail
+    @Published var selectedAdminReport: Audit? = nil
+    @Published var isLoadingDetails: Bool = false
     
     // Checklist Data
     let checklist: [SurveySection] = ChecklistData.allSections
+    
+    // Auto-save debounce
+    private var autoSaveCancellable: AnyCancellable?
+    private var lastSavedAnswers: [String: Answer]? = nil
+    
+    init() {
+        setupAutoSave()
+    }
+    
+    // MARK: - Auto-Save (matches web's 2-second debounce)
+    
+    private func setupAutoSave() {
+        autoSaveCancellable = $currentAudit
+            .debounce(for: .seconds(2), scheduler: DispatchQueue.main)
+            .sink { [weak self] audit in
+                guard let self = self,
+                      let audit = audit,
+                      let auditId = audit.id,
+                      let metadata = audit.metadata,
+                      !self.isLoading else { return }
+                
+                // Only save if answers actually changed
+                let currentAnswers = audit.answers ?? [:]
+                if currentAnswers.isEmpty { return }
+                
+                Task {
+                    await self.saveProgress(auditId: auditId, metadata: metadata, answers: currentAnswers)
+                }
+            }
+    }
+    
+    private func saveProgress(auditId: String, metadata: AuditMetadata, answers: [String: Answer]) async {
+        await MainActor.run { self.isSaving = true }
+        let progress = calculateProgress()
+        do {
+            try await APIService.shared.saveAudit(
+                auditId: auditId,
+                metadata: metadata,
+                answers: answers,
+                progress: progress
+            )
+        } catch {
+            print("Auto-save failed: \(error)")
+        }
+        await MainActor.run { self.isSaving = false }
+    }
+    
+    // MARK: - Progress Calculation (matches web app exactly)
+    
+    func calculateProgress() -> Int {
+        guard let answers = currentAudit?.answers else { return 0 }
+        var total = 0
+        var completed = 0
+        
+        for section in ChecklistData.allSections {
+            for (idx, item) in section.items.enumerated() {
+                total += 1
+                let key = "\(section.id)-\(idx)"
+                let ans = answers[key]
+                
+                if item.type == .text {
+                    if let value = ans?.value, value.trimmingCharacters(in: .whitespaces).count > 0 {
+                        completed += 1
+                    }
+                } else {
+                    if ans?.status != nil {
+                        completed += 1
+                    }
+                }
+            }
+        }
+        
+        return total == 0 ? 0 : Int((Double(completed) / Double(total)) * 100)
+    }
+    
+    // MARK: - Validation (matches web app: finds first missing item)
+    
+    func validateSurvey() -> Bool {
+        guard let answers = currentAudit?.answers else { return false }
+        
+        for section in ChecklistData.allSections {
+            for (idx, item) in section.items.enumerated() {
+                let key = "\(section.id)-\(idx)"
+                let ans = answers[key]
+                
+                if item.type == .text {
+                    if ans?.value == nil || (ans?.value ?? "").trimmingCharacters(in: .whitespaces).isEmpty {
+                        return false
+                    }
+                } else {
+                    if ans?.status == nil {
+                        return false
+                    }
+                }
+            }
+        }
+        return true
+    }
+    
+    func findFirstMissingItem() -> (section: SurveySection, question: SurveyItem)? {
+        guard let answers = currentAudit?.answers else {
+            if let s = ChecklistData.allSections.first, let i = s.items.first {
+                return (s, i)
+            }
+            return nil
+        }
+        
+        for section in ChecklistData.allSections {
+            for (idx, item) in section.items.enumerated() {
+                let key = "\(section.id)-\(idx)"
+                let ans = answers[key]
+                
+                let isFilled: Bool
+                if item.type == .text {
+                    isFilled = (ans?.value != nil && !(ans?.value ?? "").trimmingCharacters(in: .whitespaces).isEmpty)
+                } else {
+                    isFilled = (ans?.status != nil)
+                }
+                
+                if !isFilled {
+                    return (section, item)
+                }
+            }
+        }
+        return nil
+    }
+    
+    // MARK: - Upload tracking (matches web's activeUploads counter)
+    
+    func registerUploadStart() {
+        activeUploads += 1
+    }
+    
+    func registerUploadEnd() {
+        activeUploads = max(0, activeUploads - 1)
+    }
+    
+    func dismissValidationError() {
+        validationError = nil
+    }
+    
+    // MARK: - Audits
     
     func refreshAudits() async {
         guard !userId.isEmpty else { return }
@@ -31,20 +189,24 @@ class SurveyStore: ObservableObject {
         await MainActor.run { isLoading = false }
     }
     
-    func startNewAudit(metadata: AuditMetadata) {
-        let now = ISO8601DateFormatter().string(from: Date())
-        let newAudit = Audit(
-            id: UUID().uuidString,
-            userId: userId,
-            metadata: metadata,
-            answers: [:],
-            progress: 0,
-            status: "draft",
-            createdAt: now,
-            updatedAt: now,
-            pdfUrl: nil
-        )
-        currentAudit = newAudit
+    func createAudit(location: String) async -> String? {
+        await MainActor.run { isLoading = true }
+        do {
+            let auditId = try await APIService.shared.createAudit(
+                userId: userId,
+                location: location,
+                metadata: AuditMetadata(its: userId, mauze: location)
+            )
+            await MainActor.run { isLoading = false }
+            return auditId
+        } catch {
+            print("Create audit error: \(error)")
+            await MainActor.run {
+                self.error = error
+                self.isLoading = false
+            }
+            return nil
+        }
     }
     
     func updateAnswer(sectionId: String, itemIndex: Int, answer: Answer) {
@@ -70,34 +232,154 @@ class SurveyStore: ObservableObject {
         currentAudit = nil
     }
     
+    // MARK: - Submit (matches web: GAS PDF → Cloudflare save)
+    
+    func submitAudit() async {
+        guard let audit = currentAudit,
+              let auditId = audit.id,
+              let metadata = audit.metadata else { return }
+        
+        let answers = audit.answers ?? [:]
+        
+        // Validation check
+        let total = ChecklistData.allSections.flatMap { $0.items }.count
+        var completed = 0
+        for section in ChecklistData.allSections {
+            for (idx, item) in section.items.enumerated() {
+                let key = "\(section.id)-\(idx)"
+                let ans = answers[key]
+                if item.type == .text {
+                    if let v = ans?.value, !v.trimmingCharacters(in: .whitespaces).isEmpty { completed += 1 }
+                } else {
+                    if ans?.status != nil { completed += 1 }
+                }
+            }
+        }
+        
+        if completed < total {
+            let missing = findFirstMissingItem()
+            let missingText = missing != nil
+                ? "\n\nFirst missing item:\nSection: \(missing!.section.title)\nQuestion: \(missing!.question.q)"
+                : ""
+            await MainActor.run {
+                validationError = "Please complete all questions before submitting.\nAnswered: \(completed) / \(total)\(missingText)"
+            }
+            return
+        }
+        
+        if activeUploads > 0 {
+            await MainActor.run {
+                validationError = "Please wait for \(activeUploads) image(s) to finish uploading before submitting."
+            }
+            return
+        }
+        
+        await MainActor.run { isSubmitting = true }
+        
+        do {
+            // Build report data snapshots (matches web's reportData structure)
+            let snapshots = ChecklistData.allSections.map { section in
+                SectionSnapshot(title: section.title, items: section.items.enumerated().map { (idx, item) in
+                    ItemSnapshot(
+                        question: item.q,
+                        type: item.type.rawValue,
+                        answer: answers["\(section.id)-\(idx)"] ?? Answer(status: nil, value: "", photos: [])
+                    )
+                })
+            }
+            
+            // 1. Generate PDF via GAS
+            var pdfUrl: String = ""
+            do {
+                pdfUrl = try await APIService.shared.generatePDF(
+                    auditId: auditId,
+                    userId: userId,
+                    metadata: metadata,
+                    answers: answers,
+                    reportData: snapshots
+                )
+            } catch {
+                print("GAS PDF generation failed: \(error)")
+                // Continue even if PDF fails, matching web behavior
+            }
+            
+            // 2. Submit to Cloudflare/NeonDB
+            try await APIService.shared.submitAudit(
+                auditId: auditId,
+                userId: userId,
+                reportData: snapshots,
+                pdfUrl: pdfUrl
+            )
+            
+            await MainActor.run {
+                isSubmitting = false
+                clearCurrentAudit()
+            }
+        } catch {
+            print("Submit error: \(error)")
+            await MainActor.run { isSubmitting = false }
+        }
+    }
+    
     // MARK: - Admin Functions
     
     func loginAdmin(password: String) async -> Bool {
         await MainActor.run { isLoading = true }
-        do {
-            // Match Web App's demo fallback and also could hit backend if token logic added later
-            let success = (password == "admin123")
-            await MainActor.run {
-                self.isAdmin = success
-                self.isLoading = false
-            }
-            return success
+        let success = (password == "admin123")
+        await MainActor.run {
+            self.isAdmin = success
+            self.isLoading = false
         }
+        return success
     }
     
     func fetchAdminReports() async {
-        await MainActor.run { isLoading = true }
+        await MainActor.run {
+            isLoading = true
+            adminPage = 1
+        }
         do {
-            let result = try await APIService.shared.fetchAllReports(page: 1)
+            let (reports, hasMore) = try await APIService.shared.fetchAllReports(page: 1)
             await MainActor.run {
-                self.adminReports = result
+                self.adminReports = reports
+                self.adminHasMore = hasMore
                 self.isLoading = false
             }
         } catch {
             print("Admin fetch error: \(error)")
+            await MainActor.run { self.isLoading = false }
+        }
+    }
+    
+    func fetchMoreAdminReports() async {
+        guard adminHasMore, !adminIsLoadingMore else { return }
+        let nextPage = adminPage + 1
+        await MainActor.run { adminIsLoadingMore = true }
+        do {
+            let (reports, hasMore) = try await APIService.shared.fetchAllReports(page: nextPage)
             await MainActor.run {
-                self.isLoading = false
+                self.adminReports.append(contentsOf: reports)
+                self.adminPage = nextPage
+                self.adminHasMore = hasMore
+                self.adminIsLoadingMore = false
             }
+        } catch {
+            print("Admin fetch more error: \(error)")
+            await MainActor.run { self.adminIsLoadingMore = false }
+        }
+    }
+    
+    func fetchAdminReportDetails(auditId: String) async {
+        await MainActor.run { isLoadingDetails = true }
+        do {
+            let detail = try await APIService.shared.fetchAuditDetails(auditId: auditId)
+            await MainActor.run {
+                self.selectedAdminReport = detail
+                self.isLoadingDetails = false
+            }
+        } catch {
+            print("Admin detail fetch error: \(error)")
+            await MainActor.run { self.isLoadingDetails = false }
         }
     }
     
@@ -106,5 +388,6 @@ class SurveyStore: ObservableObject {
         self.isAdmin = false
         self.audits = []
         self.adminReports = []
+        self.selectedAdminReport = nil
     }
 }

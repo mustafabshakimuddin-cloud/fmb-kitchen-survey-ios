@@ -5,77 +5,74 @@ struct SurveyWizardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var store: SurveyStore
     @State private var currentSectionIndex = 0
-    @State private var isSubmitting = false
+    
+    var sections: [SurveySection] { ChecklistData.allSections }
+    var currentSection: SurveySection { sections[currentSectionIndex] }
+    var isLastSection: Bool { currentSectionIndex == sections.count - 1 }
+    var progress: Int { store.calculateProgress() }
+    var isValid: Bool { store.validateSurvey() }
     
     var body: some View {
         NavigationView {
-            VStack {
-                // Progress Bar
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Section \(currentSectionIndex + 1) of \(ChecklistData.allSections.count)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(Int((Double(currentSectionIndex + 1) / Double(ChecklistData.allSections.count)) * 100))%")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    ProgressView(value: Double(currentSectionIndex + 1), total: Double(ChecklistData.allSections.count))
-                }
-                .padding()
-                
-                // Section Title
-                Text(ChecklistData.allSections[currentSectionIndex].title)
-                    .font(.title2.bold())
-                    .padding(.horizontal)
-                
-                // Questions
-                ScrollView {
-                    VStack(spacing: 20) {
-                        ForEach(ChecklistData.allSections[currentSectionIndex].items.indices, id: \.self) { idx in
-                            QuestionView(
-                                sectionId: ChecklistData.allSections[currentSectionIndex].id,
-                                itemIndex: idx,
-                                item: ChecklistData.allSections[currentSectionIndex].items[idx]
-                            )
+            ZStack {
+                VStack(spacing: 0) {
+                    // MARK: - Progress Header (matches web's sticky progress header)
+                    progressHeader
+                    
+                    // MARK: - Questions ScrollView
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                // Section Title
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(currentSection.title)
+                                        .font(.title2.bold())
+                                        .foregroundColor(.slate900)
+                                    Text("Please answer all questions below.")
+                                        .font(.subheadline)
+                                        .foregroundColor(.slate500)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding()
+                                .id("sectionTop")
+                                
+                                // Question Cards
+                                VStack(spacing: 16) {
+                                    ForEach(currentSection.items.indices, id: \.self) { idx in
+                                        QuestionCardView(
+                                            sectionId: currentSection.id,
+                                            itemIndex: idx,
+                                            item: currentSection.items[idx]
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
+                                .padding(.bottom, 120) // Space for nav buttons
+                            }
                         }
-                    }
-                    .padding()
-                }
-                
-                Spacer()
-                
-                // Navigation Buttons
-                HStack {
-                    if currentSectionIndex > 0 {
-                        Button("Back") {
-                            withAnimation { currentSectionIndex -= 1 }
+                        .onChange(of: currentSectionIndex) { _ in
+                            withAnimation {
+                                proxy.scrollTo("sectionTop", anchor: .top)
+                            }
                         }
-                        .buttonStyle(.bordered)
                     }
                     
-                    Spacer()
+                    Spacer(minLength: 0)
                     
-                    if currentSectionIndex < ChecklistData.allSections.count - 1 {
-                        Button("Next") {
-                            withAnimation { currentSectionIndex += 1 }
-                        }
-                        .buttonStyle(.borderedProminent)
-                    } else {
-                        Button("Submit Audit") {
-                            submitAudit()
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.green)
-                        .disabled(isSubmitting)
-                    }
+                    // MARK: - Navigation Bar (matches web's sticky bottom nav)
+                    navigationBar
                 }
-                .padding()
-                .background(Color.white)
-                .shadow(radius: 2)
+                
+                // MARK: - Submitting Overlay (matches web's submission progress modal)
+                if store.isSubmitting {
+                    submittingOverlay
+                }
+                
+                // MARK: - Validation Error Modal (matches web's validation error modal)
+                if store.validationError != nil {
+                    validationErrorModal
+                }
             }
-            .navigationTitle(ChecklistData.allSections[currentSectionIndex].title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -87,6 +84,277 @@ struct SurveyWizardView: View {
         }
     }
     
+    // MARK: - Progress Header
+    
+    var progressHeader: some View {
+        VStack(spacing: 8) {
+            HStack {
+                // Section Dropdown (matches web's section picker)
+                Menu {
+                    ForEach(sections.indices, id: \.self) { idx in
+                        Button(action: {
+                            withAnimation { currentSectionIndex = idx }
+                        }) {
+                            HStack {
+                                Text("\(idx + 1). \(sections[idx].title)")
+                                if idx == currentSectionIndex {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text("\(currentSectionIndex + 1). \(currentSection.title)")
+                            .font(.subheadline.bold())
+                            .foregroundColor(.slate700)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundColor(.slate400)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.white)
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate200, lineWidth: 1))
+                    .shadow(color: .black.opacity(0.05), radius: 2)
+                }
+                
+                Spacer()
+                
+                // Saving Status & Progress (matches web's saving indicator)
+                VStack(alignment: .trailing, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(store.isSaving ? Color.orange : Color.green)
+                            .frame(width: 6, height: 6)
+                        Text(store.isSaving ? "Saving..." : "Saved")
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.slate400)
+                    }
+                    Text("\(progress)% Done")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundColor(.slate500)
+                }
+            }
+            
+            // Progress Bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.slate200)
+                        .frame(height: 6)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.blue)
+                        .frame(width: geo.size.width * CGFloat(progress) / 100.0, height: 6)
+                        .animation(.easeInOut(duration: 0.5), value: progress)
+                }
+            }
+            .frame(height: 6)
+        }
+        .padding()
+        .background(Color.slate50.opacity(0.95))
+    }
+    
+    // MARK: - Navigation Bar
+    
+    var navigationBar: some View {
+        VStack(spacing: 12) {
+            // Warning banners (matching web)
+            if isLastSection && !isValid {
+                HStack {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Text("Please answer **all questions** in all sections to submit.")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.orange.opacity(0.3), lineWidth: 1))
+            }
+            
+            if store.activeUploads > 0 {
+                HStack {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                    Text("Uploading \(store.activeUploads) image(s)... Please wait.")
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(8)
+            }
+            
+            // Navigation buttons
+            HStack(spacing: 16) {
+                if currentSectionIndex > 0 {
+                    Button(action: {
+                        withAnimation { currentSectionIndex -= 1 }
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.left")
+                            Text("Back")
+                        }
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .foregroundColor(.slate700)
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.slate200, lineWidth: 1))
+                        .shadow(color: .black.opacity(0.05), radius: 4)
+                    }
+                }
+                
+                if isLastSection {
+                    Button(action: {
+                        Task { await store.submitAudit() }
+                    }) {
+                        HStack {
+                            Text("Submit Audit")
+                            Image(systemName: "paperplane.fill")
+                        }
+                        .font(.body.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(store.isSubmitting || store.activeUploads > 0 ? Color.green.opacity(0.5) : Color.green)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .shadow(color: .green.opacity(0.3), radius: 6)
+                    }
+                    .disabled(store.isSubmitting || store.activeUploads > 0)
+                } else {
+                    Button(action: {
+                        withAnimation { currentSectionIndex += 1 }
+                    }) {
+                        HStack {
+                            Text("Next")
+                            Image(systemName: "arrow.right")
+                        }
+                        .font(.body.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.blue)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                        .shadow(color: .blue.opacity(0.3), radius: 6)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(
+            Color.white
+                .shadow(color: .black.opacity(0.1), radius: 8, y: -4)
+        )
+    }
+    
+    // MARK: - Submitting Overlay (matches web's submission progress modal)
+    
+    var submittingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(Color.green.opacity(0.1))
+                        .frame(width: 64, height: 64)
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(.green)
+                }
+                
+                Text("Submitting Audit...")
+                    .font(.title3.bold())
+                    .foregroundColor(.slate900)
+                
+                Text("Please wait while we generate your PDF report and finalize the submission.")
+                    .font(.subheadline)
+                    .foregroundColor(.slate500)
+                    .multilineTextAlignment(.center)
+                
+                // Animated progress bar
+                GeometryReader { geo in
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.slate100)
+                        .frame(height: 8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.green)
+                                .frame(width: geo.size.width * 0.33, height: 8)
+                                .modifier(IndeterminateProgressModifier(width: geo.size.width))
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                }
+                .frame(height: 8)
+            }
+            .padding(32)
+            .background(Color.white)
+            .cornerRadius(20)
+            .shadow(radius: 20)
+            .padding(40)
+        }
+    }
+    
+    // MARK: - Validation Error Modal (matches web's validation error modal)
+    
+    var validationErrorModal: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .onTapGesture { store.dismissValidationError() }
+            
+            VStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.red.opacity(0.1))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.title2)
+                        .foregroundColor(.red)
+                }
+                
+                Text("Incomplete Audit")
+                    .font(.headline)
+                    .foregroundColor(.slate900)
+                
+                Text(store.validationError ?? "")
+                    .font(.subheadline)
+                    .foregroundColor(.slate600)
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.slate50)
+                    .cornerRadius(8)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate100, lineWidth: 1))
+                
+                Button(action: { store.dismissValidationError() }) {
+                    Text("OK, I'll fix it")
+                        .font(.body.bold())
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.slate900)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+            }
+            .padding(24)
+            .background(Color.white)
+            .cornerRadius(20)
+            .shadow(radius: 20)
+            .padding(32)
+        }
+    }
+    
+    // MARK: - Actions
+    
     func saveAndExit() {
         Task {
             if let audit = store.currentAudit,
@@ -96,7 +364,7 @@ struct SurveyWizardView: View {
                     auditId: auditId,
                     metadata: metadata,
                     answers: audit.answers ?? [:],
-                    progress: calculateProgress()
+                    progress: store.calculateProgress()
                 )
             }
             await MainActor.run {
@@ -104,71 +372,43 @@ struct SurveyWizardView: View {
             }
         }
     }
+}
+
+// MARK: - Indeterminate Progress Animation
+
+struct IndeterminateProgressModifier: ViewModifier {
+    let width: CGFloat
+    @State private var offset: CGFloat = 0
     
-    func submitAudit() {
-        isSubmitting = true
-        Task {
-            do {
-                guard let audit = store.currentAudit,
-                      let auditId = audit.id,
-                      let metadata = audit.metadata else { return }
-                
-                // 1. Generate Snapshots
-                let snapshots = ChecklistData.allSections.map { section in
-                    SectionSnapshot(title: section.title, items: section.items.enumerated().map { (idx, item) in
-                        ItemSnapshot(question: item.q, type: item.type.rawValue, answer: audit.answers?["\(section.id)-\(idx)"] ?? Answer(status: nil, value: "", photos: []))
-                    })
+    func body(content: Content) -> some View {
+        content
+            .offset(x: offset - width * 0.33)
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    offset = width
                 }
-                
-                // 2. Generate PDF via GAS
-                let pdfUrl = try await APIService.shared.generatePDF(
-                    auditId: auditId,
-                    userId: store.userId,
-                    metadata: metadata,
-                    answers: audit.answers ?? [:],
-                    reportData: snapshots
-                )
-                
-                // 3. Submit to Cloudflare/NeonDB
-                try await APIService.shared.submitAudit(
-                    auditId: auditId,
-                    userId: store.userId,
-                    reportData: snapshots,
-                    pdfUrl: pdfUrl
-                )
-                
-                await MainActor.run {
-                    isSubmitting = false
-                    store.clearCurrentAudit()
-                }
-            } catch {
-                print("Submit error: \(error)")
-                await MainActor.run { isSubmitting = false }
             }
-        }
-    }
-    
-    func calculateProgress() -> Int {
-        // Simple progress calculation based on answered questions
-        let total = ChecklistData.allSections.flatMap { $0.items }.count
-        let answered = store.currentAudit?.answers?.count ?? 0
-        return Int((Double(answered) / Double(total)) * 100)
     }
 }
 
-struct QuestionView: View {
+// MARK: - Question Card (matches web's QuestionCard.jsx — images on ALL question types)
+
+struct QuestionCardView: View {
     @EnvironmentObject var store: SurveyStore
     let sectionId: String
     let itemIndex: Int
     let item: SurveyItem
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
+            // Question text
             Text(item.q)
                 .font(.body.bold())
+                .foregroundColor(.slate900)
             
             if item.type == .status {
-                HStack(spacing: 20) {
+                // Pass / Fail / N/A buttons (matches web's StatusButton)
+                HStack(spacing: 12) {
                     StatusButton(title: "Pass", color: .green, isSelected: getAnswer().status?.isPass == true) {
                         setAnswer(status: .string("Pass"))
                     }
@@ -179,21 +419,28 @@ struct QuestionView: View {
                         setAnswer(status: .string("N/A"))
                     }
                 }
-                
-                ImageUploadView(photos: Binding(
-                    get: { getAnswer().photos ?? [] },
-                    set: { setAnswer(photos: $0) }
-                ))
             } else {
-                TextEditor(text: Binding(get: { getAnswer().value ?? "" }, set: { setAnswer(value: $0) }))
-                    .frame(height: 80)
-                    .padding(4)
-                    .background(Color.slate50)
-                    .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate200, lineWidth: 1))
+                // Text input
+                TextEditor(text: Binding(
+                    get: { getAnswer().value ?? "" },
+                    set: { setAnswer(value: $0) }
+                ))
+                .frame(minHeight: 80)
+                .padding(8)
+                .background(Color.slate50)
+                .cornerRadius(8)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate200, lineWidth: 1))
             }
+            
+            // Image Upload Section — on ALL question types (matches web)
+            Divider()
+            
+            ImageUploadView(photos: Binding(
+                get: { getAnswer().photos ?? [] },
+                set: { setAnswer(photos: $0) }
+            ))
         }
-        .padding()
+        .padding(16)
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 5)
@@ -212,50 +459,88 @@ struct QuestionView: View {
     }
 }
 
+// MARK: - Image Upload (matches web's ImageInput.jsx exactly — upload + delete)
+
 struct ImageUploadView: View {
+    @EnvironmentObject var store: SurveyStore
     @Binding var photos: [String]
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var isUploading = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "photo.fill")
+                    .foregroundColor(.blue)
+                    .font(.caption)
+                Text("Photos")
+                    .font(.caption.bold())
+                    .foregroundColor(.slate700)
+                Text("(\(photos.count) attached)")
+                    .font(.caption)
+                    .foregroundColor(.slate400)
+            }
+            
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(photos, id: \.self) { url in
-                        AsyncImage(url: URL(string: url)) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            ProgressView()
-                        }
-                        .frame(width: 60, height: 60)
-                        .cornerRadius(8)
-                        .overlay(
-                            Button(action: { photos.removeAll { $0 == url } }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.white)
-                                    .background(Color.black.opacity(0.5))
-                                    .clipShape(Circle())
+                    // Existing photos
+                    ForEach(photos.indices, id: \.self) { idx in
+                        ZStack(alignment: .topTrailing) {
+                            AsyncImage(url: URL(string: photos[idx])) { phase in
+                                switch phase {
+                                case .success(let image):
+                                    image.resizable().aspectRatio(contentMode: .fill)
+                                case .failure:
+                                    Color.slate100
+                                        .overlay(Image(systemName: "photo").foregroundColor(.slate400))
+                                default:
+                                    Color.slate100.overlay(ProgressView())
+                                }
                             }
-                            .padding(2),
-                            alignment: .topTrailing
-                        )
+                            .frame(width: 64, height: 64)
+                            .cornerRadius(10)
+                            .clipped()
+                            
+                            // Delete button (matches web's X button with Drive delete)
+                            Button(action: {
+                                let photoUrl = photos[idx]
+                                photos.remove(at: idx) // Optimistic removal (matches web)
+                                Task { await APIService.shared.deletePhoto(photoUrl: photoUrl) }
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.white)
+                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                            }
+                            .padding(2)
+                        }
                     }
                     
+                    // Add button
                     PhotosPicker(selection: $selectedItems, maxSelectionCount: 5, matching: .images) {
-                        VStack {
+                        VStack(spacing: 4) {
                             if isUploading {
                                 ProgressView()
+                                    .scaleEffect(0.8)
                             } else {
-                                Image(systemName: "camera.fill")
-                                    .font(.caption)
+                                Image(systemName: "plus")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .padding(8)
+                                    .background(Color.slate100)
+                                    .clipShape(Circle())
                                 Text("Add")
                                     .font(.system(size: 10, weight: .bold))
                             }
                         }
-                        .frame(width: 60, height: 60)
-                        .background(Color.slate100)
+                        .frame(width: 64, height: 64)
+                        .background(Color.slate50)
                         .foregroundColor(.slate400)
-                        .cornerRadius(8)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(style: StrokeStyle(lineWidth: 2, dash: [6]))
+                                .foregroundColor(.slate300)
+                        )
                     }
                     .disabled(isUploading)
                 }
@@ -269,6 +554,7 @@ struct ImageUploadView: View {
     private func uploadImages(items: [PhotosPickerItem]) {
         guard !items.isEmpty else { return }
         isUploading = true
+        store.registerUploadStart()
         
         Task {
             for item in items {
@@ -296,9 +582,12 @@ struct ImageUploadView: View {
                 isUploading = false
                 selectedItems = []
             }
+            store.registerUploadEnd()
         }
     }
 }
+
+// MARK: - Status Button
 
 struct StatusButton: View {
     let title: String
@@ -308,16 +597,32 @@ struct StatusButton: View {
     
     var body: some View {
         Button(action: action) {
-            Text(title)
-                .font(.caption.bold())
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(isSelected ? color : Color.white)
-                .foregroundColor(isSelected ? .white : color)
-                .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(color, lineWidth: 1))
+            VStack(spacing: 4) {
+                Image(systemName: iconName)
+                    .font(.system(size: 20, weight: isSelected ? .bold : .regular))
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(isSelected ? color.opacity(0.1) : Color.white)
+            .foregroundColor(isSelected ? color : .slate400)
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? color : Color.slate100, lineWidth: isSelected ? 2 : 1)
+            )
+            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .shadow(color: isSelected ? color.opacity(0.2) : .clear, radius: 4)
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
+        }
+    }
+    
+    var iconName: String {
+        switch title {
+        case "Pass": return "checkmark"
+        case "Fail": return "xmark"
+        default: return "minus"
         }
     }
 }
-
-
