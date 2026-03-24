@@ -49,7 +49,11 @@ class APIService {
         }
         
         let result = try JSONDecoder().decode(AuditResponse.self, from: data)
-        return result.audit.data
+        var audit = result.audit.data
+        if audit.id == nil {
+            audit.id = auditId
+        }
+        return audit
     }
     
     func saveAudit(auditId: String, metadata: AuditMetadata, answers: [String: Answer], progress: Int) async throws {

@@ -1,7 +1,7 @@
 import Foundation
 
 struct Audit: Codable, Identifiable {
-    let id: String
+    var id: String?
     var userId: String?
     var metadata: AuditMetadata?
     var answers: [String: Answer]?
