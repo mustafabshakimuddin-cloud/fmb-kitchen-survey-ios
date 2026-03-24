@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct SurveyWizardView: View {
     @Environment(\.dismiss) var dismiss
@@ -169,15 +170,20 @@ struct QuestionView: View {
             if item.type == .status {
                 HStack(spacing: 20) {
                     StatusButton(title: "Pass", color: .green, isSelected: getAnswer().status?.isPass == true) {
-                        setAnswer(status: .bool(true))
+                        setAnswer(status: .string("Pass"))
                     }
                     StatusButton(title: "Fail", color: .red, isSelected: getAnswer().status?.isFail == true) {
-                        setAnswer(status: .bool(false))
+                        setAnswer(status: .string("Fail"))
                     }
                     StatusButton(title: "N/A", color: .gray, isSelected: getAnswer().status?.isNA == true) {
                         setAnswer(status: .string("N/A"))
                     }
                 }
+                
+                ImageUploadView(photos: Binding(
+                    get: { getAnswer().photos ?? [] },
+                    set: { setAnswer(photos: $0) }
+                ))
             } else {
                 TextEditor(text: Binding(get: { getAnswer().value ?? "" }, set: { setAnswer(value: $0) }))
                     .frame(height: 80)
@@ -197,11 +203,100 @@ struct QuestionView: View {
         store.currentAudit?.answers?["\(sectionId)-\(itemIndex)"] ?? Answer(status: nil, value: "", photos: [])
     }
     
-    func setAnswer(status: Answer.AnswerStatus? = nil, value: String? = nil) {
+    func setAnswer(status: Answer.AnswerStatus? = nil, value: String? = nil, photos: [String]? = nil) {
         var ans = getAnswer()
         if let status = status { ans.status = status }
         if let value = value { ans.value = value }
+        if let photos = photos { ans.photos = photos }
         store.updateAnswer(sectionId: sectionId, itemIndex: itemIndex, answer: ans)
+    }
+}
+
+struct ImageUploadView: View {
+    @Binding var photos: [String]
+    @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var isUploading = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(photos, id: \.self) { url in
+                        AsyncImage(url: URL(string: url)) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 60, height: 60)
+                        .cornerRadius(8)
+                        .overlay(
+                            Button(action: { photos.removeAll { $0 == url } }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.white)
+                                    .background(Color.black.opacity(0.5))
+                                    .clipShape(Circle())
+                            }
+                            .padding(2),
+                            alignment: .topTrailing
+                        )
+                    }
+                    
+                    PhotosPicker(selection: $selectedItems, maxSelectionCount: 5, matching: .images) {
+                        VStack {
+                            if isUploading {
+                                ProgressView()
+                            } else {
+                                Image(systemName: "camera.fill")
+                                    .font(.caption)
+                                Text("Add")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                        }
+                        .frame(width: 60, height: 60)
+                        .background(Color.slate100)
+                        .foregroundColor(.slate400)
+                        .cornerRadius(8)
+                    }
+                    .disabled(isUploading)
+                }
+            }
+        }
+        .onChange(of: selectedItems) { items in
+            uploadImages(items: items)
+        }
+    }
+    
+    private func uploadImages(items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
+        isUploading = true
+        
+        Task {
+            for item in items {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    let base64 = data.base64EncodedString()
+                    let fileName = "ios_upload_\(UUID().uuidString).jpg"
+                    
+                    do {
+                        let url = try await APIService.shared.uploadPhoto(
+                            fileName: fileName,
+                            mimeType: "image/jpeg",
+                            base64Data: base64
+                        )
+                        await MainActor.run {
+                            if !photos.contains(url) {
+                                photos.append(url)
+                            }
+                        }
+                    } catch {
+                        print("Upload failed: \(error)")
+                    }
+                }
+            }
+            await MainActor.run {
+                isUploading = false
+                selectedItems = []
+            }
+        }
     }
 }
 

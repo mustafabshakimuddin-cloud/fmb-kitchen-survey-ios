@@ -114,19 +114,20 @@ struct ItemSnapshot: Codable {
 
 extension Answer.AnswerStatus {
     var isPass: Bool {
-        if case .bool(let b) = self { return b }
-        return false
+        switch self {
+        case .bool(let b): return b
+        case .string(let s): return s == "Pass"
+        }
     }
     var isFail: Bool {
-        if case .bool(let b) = self { return !b }
-        return false
+        switch self {
+        case .bool(let b): return !b
+        case .string(let s): return s == "Fail"
+        }
     }
     var isNA: Bool {
         if case .string(let s) = self { return s == "N/A" }
         return false
-    }
-    var isFailure: Bool {
-        return isFail
     }
 }
 

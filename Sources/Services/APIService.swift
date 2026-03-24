@@ -179,4 +179,39 @@ class APIService {
         let response = try await model.generateContent([try ModelContent(role: "user", parts: [systemPrompt])] + chatHistory)
         return response.text ?? "I'm sorry, I couldn't generate a response."
     }
+    
+    // MARK: - Photo Uploads
+    
+    struct UploadResponse: Codable {
+        let url: String?
+        let error: String?
+    }
+    
+    func uploadPhoto(fileName: String, mimeType: String, base64Data: String) async throws -> String {
+        let payload: [String: Any] = [
+            "action": "upload",
+            "fileName": fileName,
+            "mimeType": mimeType,
+            "fileData": base64Data
+        ]
+        
+        guard let url = URL(string: Constants.gasScriptUrl) else { throw APIError.invalidURL }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+        
+        let decoded = try JSONDecoder().decode(UploadResponse.self, from: data)
+        if let photoUrl = decoded.url {
+            return photoUrl
+        } else {
+            throw NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: decoded.error ?? "Upload failed"])
+        }
+    }
 }
