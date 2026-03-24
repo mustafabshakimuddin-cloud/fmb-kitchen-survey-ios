@@ -138,7 +138,9 @@ class APIService {
         }
         
         let contextData = fullAudits.map { r in
-            let failures = r.answers?.filter { $1.status?.isFailure ?? false }.map { $1.value.isEmpty ? $0.key : $1.value }.prefix(10) ?? []
+            let failures = r.answers?.filter { $0.value.status?.isFailure ?? false }
+                .map { $0.value.value.isEmpty ? $0.key : $0.value.value }
+                .prefix(10) ?? []
             return """
             ID: \(r.id)
             Kitchen: \(r.metadata.mauze)
