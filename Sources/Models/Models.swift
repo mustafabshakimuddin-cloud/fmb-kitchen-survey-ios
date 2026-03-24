@@ -36,6 +36,28 @@ struct AuditSummary: Codable, Identifiable {
 struct AuditMetadata: Codable {
     var its: String?
     var mauze: String?
+    
+    enum CodingKeys: String, CodingKey {
+        case its, mauze
+    }
+    
+    init(its: String? = nil, mauze: String? = nil) {
+        self.its = its
+        self.mauze = mauze
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        mauze = try container.decodeIfPresent(String.self, forKey: .mauze)
+        
+        if let s = try? container.decodeIfPresent(String.self, forKey: .its) {
+            its = s
+        } else if let i = try? container.decodeIfPresent(Int.self, forKey: .its) {
+            its = String(i)
+        } else {
+            its = nil
+        }
+    }
 }
 
 struct Answer: Codable {

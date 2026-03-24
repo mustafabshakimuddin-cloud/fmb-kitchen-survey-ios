@@ -225,9 +225,9 @@ class APIService {
         }
         
         struct AdminReport: Codable {
-            let auditId: String
-            let userId: String
-            let timestamp: String
+            let auditId: String?
+            let userId: String?
+            let timestamp: String?
             let pdfUrl: String?
             let progress: Int?
             let status: String?
@@ -243,11 +243,12 @@ class APIService {
         }
         
         let decoded = try JSONDecoder().decode(AllReportsResponse.self, from: data)
-        return decoded.reports.map { r in
-            AuditSummary(
-                id: r.auditId,
+        return decoded.reports.compactMap { r in
+            guard let id = r.auditId else { return nil }
+            return AuditSummary(
+                id: id,
                 location: r.data?.metadata?.mauze ?? "Unknown Location",
-                lastUpdated: r.timestamp,
+                lastUpdated: r.timestamp ?? "",
                 progress: r.progress ?? 0,
                 status: (r.status == "submitted" || r.status == "Completed") ? "Completed" : "In Progress",
                 reportUrl: r.pdfUrl
