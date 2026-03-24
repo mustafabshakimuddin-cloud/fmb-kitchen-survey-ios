@@ -208,18 +208,4 @@ struct StatusButton: View {
     }
 }
 
-extension Answer.AnswerStatus {
-    var isPass: Bool {
-        if case .bool(let b) = self { return b }
-        return false
-    }
-    var isFail: Bool {
-        if case .bool(let b) = self { return !b }
-        return false
-    }
-    var isNA: Bool {
-        if case .string(let s) = self { return s == "N/A" }
-        return false
-    }
-}
 

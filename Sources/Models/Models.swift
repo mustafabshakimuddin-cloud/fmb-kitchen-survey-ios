@@ -106,10 +106,25 @@ struct SectionSnapshot: Codable {
     let items: [ItemSnapshot]
 }
 
-struct ItemSnapshot: Codable {
-    let question: String
-    let type: String
     let answer: Answer
+}
+
+extension Answer.AnswerStatus {
+    var isPass: Bool {
+        if case .bool(let b) = self { return b }
+        return false
+    }
+    var isFail: Bool {
+        if case .bool(let b) = self { return !b }
+        return false
+    }
+    var isNA: Bool {
+        if case .string(let s) = self { return s == "N/A" }
+        return false
+    }
+    var isFailure: Bool {
+        return isFail
+    }
 }
 
 struct ChatMessage: Identifiable, Codable {

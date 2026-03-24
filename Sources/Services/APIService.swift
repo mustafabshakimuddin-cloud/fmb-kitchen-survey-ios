@@ -157,7 +157,7 @@ class APIService {
         }
         
         let contextData = fullAudits.map { r in
-            let failures = r.answers?.filter { $0.value.status?.isFailure ?? false }
+            let failures = r.answers?.filter { ($0.value.status?.isFailure ?? false) }
                 .map { ($0.value.value ?? "").isEmpty ? $0.key : ($0.value.value ?? "") }
                 .prefix(10) ?? []
             return """
@@ -173,10 +173,10 @@ class APIService {
         let systemPrompt = "You are the FMB Audit Assistant. Use the following audit context to answer questions: \n\n\(contextData)\n\nPlease keep responses professional and concise."
         
         let chatHistory = messages.map { m in
-            ModelContent(role: m.role == "user" ? "user" : "model", parts: [TextPart(m.text)])
+            ModelContent(role: m.role == "user" ? "user" : "model", parts: [m.text])
         }
         
-        let response = try await model.generateContent([ModelContent(role: "user", parts: [TextPart(systemPrompt)])] + chatHistory)
+        let response = try await model.generateContent([ModelContent(role: "user", parts: [systemPrompt])] + chatHistory)
         return response.text ?? "I'm sorry, I couldn't generate a response."
     }
 }
