@@ -172,11 +172,11 @@ class APIService {
         
         let systemPrompt = "You are the FMB Audit Assistant. Use the following audit context to answer questions: \n\n\(contextData)\n\nPlease keep responses professional and concise."
         
-        let chatHistory = messages.map { m in
-            ModelContent(role: m.role == "user" ? "user" : "model", parts: [m.text])
+        let chatHistory = try messages.map { m in
+            try ModelContent(role: m.role == "user" ? "user" : "model", parts: [m.text])
         }
         
-        let response = try await model.generateContent([ModelContent(role: "user", parts: [systemPrompt])] + chatHistory)
+        let response = try await model.generateContent([try ModelContent(role: "user", parts: [systemPrompt])] + chatHistory)
         return response.text ?? "I'm sorry, I couldn't generate a response."
     }
 }
