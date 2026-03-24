@@ -61,13 +61,20 @@ struct DashboardView: View {
     var auditList: some View {
         List {
             ForEach(store.audits) { audit in
-                AuditRow(audit: audit, isSelected: selectedAuditIds.contains(audit.id)) {
-                    if selectedAuditIds.contains(audit.id) {
-                        selectedAuditIds.remove(audit.id)
-                    } else {
-                        selectedAuditIds.insert(audit.id)
+                AuditRow(
+                    audit: audit,
+                    isSelected: selectedAuditIds.contains(audit.id),
+                    onToggleSelection: {
+                        if selectedAuditIds.contains(audit.id) {
+                            selectedAuditIds.remove(audit.id)
+                        } else {
+                            selectedAuditIds.insert(audit.id)
+                        }
+                    },
+                    onTap: {
+                        Task { await store.loadAudit(id: audit.id) }
                     }
-                }
+                )
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
@@ -101,6 +108,7 @@ struct AuditRow: View {
     let audit: AuditSummary
     let isSelected: Bool
     let onToggleSelection: () -> Void
+    let onTap: () -> Void
     
     // Simple date formatter for string to date
     func parseDate(_ dateString: String) -> Date {
@@ -117,47 +125,54 @@ struct AuditRow: View {
                     .foregroundColor(isSelected ? .blue : .slate400)
                     .font(.title3)
             }
+            .buttonStyle(PlainButtonStyle())
             
-            VStack(alignment: .leading, spacing: 4) {
-                Text(audit.location)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                Text("ID: \(audit.id.prefix(8))...")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                
+            // Main Content Area (Tappable)
+            Button(action: onTap) {
                 HStack {
-                    StatusBadge(status: audit.status)
-                    Text(parseDate(audit.lastUpdated), style: .date)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(audit.location)
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text("ID: \(audit.id.prefix(8))...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        HStack {
+                            StatusBadge(status: audit.status)
+                            Text(parseDate(audit.lastUpdated), style: .date)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Progress Ring
+                    ZStack {
+                        Circle()
+                            .stroke(lineWidth: 4)
+                            .opacity(0.1)
+                            .foregroundColor(.blue)
+                        
+                        Circle()
+                            .trim(from: 0.0, to: CGFloat(min(Double(audit.progress) / 100.0, 1.0)))
+                            .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                            .foregroundColor(.blue)
+                            .rotationEffect(Angle(degrees: 270.0))
+                        
+                        Text("\(audit.progress)%")
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .frame(width: 36, height: 36)
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.slate400)
                 }
             }
-            
-            Spacer()
-            
-            // Progress Ring
-            ZStack {
-                Circle()
-                    .stroke(lineWidth: 4)
-                    .opacity(0.1)
-                    .foregroundColor(.blue)
-                
-                Circle()
-                    .trim(from: 0.0, to: CGFloat(min(Double(audit.progress) / 100.0, 1.0)))
-                    .stroke(style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-                    .foregroundColor(.blue)
-                    .rotationEffect(Angle(degrees: 270.0))
-                
-                Text("\(audit.progress)%")
-                    .font(.system(size: 10, weight: .bold))
-            }
-            .frame(width: 36, height: 36)
-            
-            Image(systemName: "chevron.right")
-                .font(.caption2)
-                .foregroundColor(.slate400)
+            .buttonStyle(PlainButtonStyle())
         }
         .padding()
         .background(Color.white)

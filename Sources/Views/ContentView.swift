@@ -7,8 +7,15 @@ struct ContentView: View {
         Group {
             if store.userId.isEmpty {
                 LoginView()
-            } else if let _ = store.currentAudit {
-                SurveyWizardView()
+            } else if let audit = store.currentAudit {
+                if audit.status == "submitted", let pdfUrl = audit.pdfUrl, let url = URL(string: pdfUrl) {
+                    SafariViewWrapper(url: url) {
+                        store.clearCurrentAudit()
+                    }
+                    .ignoresSafeArea()
+                } else {
+                    SurveyWizardView()
+                }
             } else {
                 DashboardView()
             }

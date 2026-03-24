@@ -60,4 +60,8 @@ class SurveyStore: ObservableObject {
         }
         await MainActor.run { isLoading = false }
     }
+    
+    func clearCurrentAudit() {
+        currentAudit = nil
+    }
 }
