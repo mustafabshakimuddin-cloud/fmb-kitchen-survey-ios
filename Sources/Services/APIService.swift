@@ -182,6 +182,11 @@ class APIService {
     
     // MARK: - Photo Uploads
     
+    struct UploadResponse: Codable {
+        let url: String?
+        let error: String?
+    }
+    
     func uploadPhoto(fileName: String, mimeType: String, base64Data: String) async throws -> String {
         let payload: [String: Any] = [
             "action": "upload",

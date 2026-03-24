@@ -5,6 +5,7 @@ struct ContentView: View {
     @EnvironmentObject var store: SurveyStore
     
     var body: some View {
+        Group {
             if store.isAdmin {
                 if let audit = store.currentAudit, let pdfUrl = audit.pdfUrl, let url = URL(string: pdfUrl) {
                     SafariViewWrapper(url: url) {
