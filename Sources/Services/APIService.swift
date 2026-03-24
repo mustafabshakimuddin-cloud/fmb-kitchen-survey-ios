@@ -9,7 +9,7 @@ enum APIError: Error {
 
 class APIService {
     static let shared = APIService()
-    private let baseURL = Constants.baseURL
+    private let baseURL = Constants.cloudflareApiUrl
     private let geminiApiKey = Constants.geminiApiKey
     private let session = URLSession.shared
     
@@ -116,7 +116,7 @@ class APIService {
     // MARK: - PDF Generation (Google Apps Script)
     
     func generatePDF(auditId: String, userId: String, metadata: AuditMetadata, answers: [String: Answer], reportData: [SectionSnapshot]) async throws -> String {
-        let gasURL = Constants.gasURL
+        let gasURL = Constants.gasScriptUrl
         let payload: [String: Any] = [
             "auditId": auditId,
             "userId": userId,

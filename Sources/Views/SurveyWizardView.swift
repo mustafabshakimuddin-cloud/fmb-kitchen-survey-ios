@@ -223,7 +223,3 @@ extension Answer.AnswerStatus {
     }
 }
 
-extension Color {
-    static let slate50 = Color(hex: "F8FAFC")
-    static let slate200 = Color(hex: "E2E8F0")
-}

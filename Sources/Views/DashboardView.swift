@@ -98,9 +98,16 @@ struct DashboardView: View {
 }
 
 struct AuditRow: View {
-    let audit: Audit
+    let audit: AuditSummary
     let isSelected: Bool
     let onToggleSelection: () -> Void
+    
+    // Simple date formatter for string to date
+    func parseDate(_ dateString: String) -> Date {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.date(from: dateString) ?? Date()
+    }
     
     var body: some View {
         HStack(spacing: 16) {
@@ -112,7 +119,7 @@ struct AuditRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(audit.metadata.mauze)
+                Text(audit.location)
                     .font(.headline)
                     .foregroundColor(.primary)
                 
@@ -122,7 +129,7 @@ struct AuditRow: View {
                 
                 HStack {
                     StatusBadge(status: audit.status)
-                    Text(audit.createdAt, style: .date)
+                    Text(parseDate(audit.lastUpdated), style: .date)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -197,10 +204,6 @@ struct NewAuditFormView: View {
                     }
                     .disabled(mauze.isEmpty)
                 }
-            }
-        }
-    }
-}
             }
         }
     }
