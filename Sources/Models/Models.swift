@@ -2,13 +2,13 @@ import Foundation
 
 struct Audit: Codable, Identifiable {
     let id: String
-    let userId: String
-    let metadata: AuditMetadata
+    var userId: String?
+    var metadata: AuditMetadata
     var answers: [String: Answer]?
     var progress: Int
     let status: String
-    let createdAt: Date
-    let updatedAt: Date
+    let createdAt: String?
+    let updatedAt: String?
     let pdfUrl: String?
     
     enum CodingKeys: String, CodingKey {
@@ -22,6 +22,15 @@ struct Audit: Codable, Identifiable {
         case updatedAt
         case pdfUrl
     }
+}
+
+struct AuditSummary: Codable, Identifiable {
+    let id: String
+    let location: String
+    let lastUpdated: String
+    let progress: Int
+    let status: String
+    let reportUrl: String?
 }
 
 struct AuditMetadata: Codable {

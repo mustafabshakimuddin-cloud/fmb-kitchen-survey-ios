@@ -3,14 +3,12 @@ import SwiftUI
 
 struct ChatbotView: View {
     @Environment(\.dismiss) var dismiss
-    let selectedAudits: [Audit]
-    @State private var messages: [ChatMessage] = [
-        ChatMessage(role: "model", text: "Hello! I am the FMB Audit Assistant. I am analyzing the \(0) selected reports. What would you like to know?")
-    ]
+    let selectedAudits: [AuditSummary]
+    @State private var messages: [ChatMessage] = []
     @State private var input: String = ""
     @State private var isLoading = false
     
-    init(selectedAudits: [Audit]) {
+    init(selectedAudits: [AuditSummary]) {
         self.selectedAudits = selectedAudits
         // Correcting initial message in init
         _messages = State(initialValue: [

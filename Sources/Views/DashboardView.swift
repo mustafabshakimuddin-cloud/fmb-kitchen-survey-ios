@@ -112,7 +112,7 @@ struct AuditRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(audit.metadata.mauze)
+                Text(audit.location)
                     .font(.headline)
                     .foregroundColor(.primary)
                 
@@ -122,8 +122,8 @@ struct AuditRow: View {
                 
                 HStack {
                     StatusBadge(status: audit.status)
-                    Text(audit.createdAt, style: .date)
-                        .font(.caption)
+                    Text(audit.lastUpdated)
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
             }

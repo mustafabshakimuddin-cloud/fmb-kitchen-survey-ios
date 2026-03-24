@@ -6,7 +6,7 @@ class SurveyStore: ObservableObject {
         didSet { UserDefaults.standard.set(userId, forKey: "fmb_audit_user") }
     }
     
-    @Published var audits: [Audit] = []
+    @Published var audits: [AuditSummary] = []
     @Published var currentAudit: Audit?
     @Published var isLoading: Bool = false
     @Published var error: Error?

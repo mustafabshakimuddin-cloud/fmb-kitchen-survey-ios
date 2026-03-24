@@ -12,7 +12,7 @@ class APIService {
     
     // MARK: - Cloudflare API (NeonDB)
     
-    func fetchAudits(userId: String) async throws -> [Audit] {
+    func fetchAudits(userId: String) async throws -> [AuditSummary] {
         var components = URLComponents(string: baseURL)!
         components.queryItems = [
             URLQueryItem(name: "action", value: "list"),
@@ -24,8 +24,32 @@ class APIService {
             throw APIError.invalidResponse
         }
         
-        let result = try JSONDecoder().decode(AuditListResponse.self, from: data)
+        let result = try JSONDecoder().decode(AuditSummaryListResponse.self, from: data)
         return result.audits
+    }
+    
+    func fetchAuditDetails(auditId: String) async throws -> Audit {
+        var components = URLComponents(string: baseURL)!
+        components.queryItems = [
+            URLQueryItem(name: "action", value: "get"),
+            URLQueryItem(name: "auditId", value: auditId)
+        ]
+        
+        let (data, response) = try await session.data(from: components.url!)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+            throw APIError.invalidResponse
+        }
+        
+        // The API returns { audit: { data: { metadata, answers, ... } } }
+        struct AuditResponse: Codable {
+            let audit: AuditDetail
+        }
+        struct AuditDetail: Codable {
+            let data: Audit
+        }
+        
+        let result = try JSONDecoder().decode(AuditResponse.self, from: data)
+        return result.audit.data
     }
     
     func saveAudit(auditId: String, metadata: AuditMetadata, answers: [String: Answer], progress: Int) async throws {
@@ -102,18 +126,26 @@ class APIService {
     
     // MARK: - Gemini AI
     
-    func chatWithGemini(messages: [ChatMessage], reports: [Audit]) async throws -> String {
+    func chatWithGemini(messages: [ChatMessage], reports: [AuditSummary]) async throws -> String {
         let model = GenerativeModel(name: "gemini-1.5-flash", apiKey: geminiApiKey)
         
-        let contextData = reports.map { r in
-            let failures = r.answers?.filter { $1.status?.isFailure ?? false }.map { $0.key } ?? []
+        // Fetch full details for context
+        var fullAudits: [Audit] = []
+        for r in reports {
+            if let detail = try? await fetchAuditDetails(auditId: r.id) {
+                fullAudits.append(detail)
+            }
+        }
+        
+        let contextData = fullAudits.map { r in
+            let failures = r.answers?.filter { $1.status?.isFailure ?? false }.map { $1.value.isEmpty ? $0.key : $1.value }.prefix(10) ?? []
             return """
             ID: \(r.id)
             Kitchen: \(r.metadata.mauze)
-            Date: \(r.createdAt)
+            Date: \(r.createdAt ?? "N/A")
             Status: \(r.status)
             PDF Link: \(r.pdfUrl ?? "N/A")
-            Failures/Issues: \(failures.joined(separator: ", "))
+            Key Failures/Issues: \(failures.joined(separator: ", "))
             """
         }.joined(separator: "\n---\n")
         
@@ -146,8 +178,8 @@ class APIService {
 }
 
 // Support Structs
-struct AuditListResponse: Codable {
-    let audits: [Audit]
+struct AuditSummaryListResponse: Codable {
+    let audits: [AuditSummary]
 }
 
 struct ChatMessage: Identifiable {
