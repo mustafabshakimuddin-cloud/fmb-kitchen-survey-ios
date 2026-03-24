@@ -157,7 +157,7 @@ class APIService {
         }
         
         let contextData = fullAudits.map { r in
-            let failures = r.answers?.filter { ($0.value.status?.isFailure ?? false) }
+            let failures = r.answers?.filter { ($0.value.status?.isFail ?? false) }
                 .map { ($0.value.value ?? "").isEmpty ? $0.key : ($0.value.value ?? "") }
                 .prefix(10) ?? []
             return """
