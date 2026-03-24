@@ -112,6 +112,18 @@ struct ItemSnapshot: Codable {
     let answer: Answer
 }
 
+struct ChatMessage: Identifiable, Codable {
+    let id: UUID
+    let role: String // "user" or "model"
+    let text: String
+    
+    init(id: UUID = UUID(), role: String, text: String) {
+        self.id = id
+        self.role = role
+        self.text = text
+    }
+}
+
 extension Color {
     static let slate50 = Color(hex: "F8FAFC")
     static let slate100 = Color(hex: "F1F5F9")
