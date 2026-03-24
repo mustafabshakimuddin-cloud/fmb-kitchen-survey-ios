@@ -46,6 +46,15 @@ class SurveyStore: ObservableObject {
     func updateAnswer(sectionId: String, itemIndex: Int, answer: Answer) {
         let key = "\(sectionId)-\(itemIndex)"
         currentAudit?.answers?[key] = answer
-        // Auto-save logic could go here
+    }
+    
+    func loadAudit(id: String) async {
+        isLoading = true
+        do {
+            currentAudit = try await APIService.shared.fetchAuditDetails(auditId: id)
+        } catch {
+            self.error = error
+        }
+        isLoading = false
     }
 }
