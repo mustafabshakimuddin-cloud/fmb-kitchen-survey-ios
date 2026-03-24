@@ -34,14 +34,14 @@ struct AuditSummary: Codable, Identifiable {
 }
 
 struct AuditMetadata: Codable {
-    let its: String
-    let mauze: String
+    var its: String?
+    var mauze: String?
 }
 
 struct Answer: Codable {
     var status: AnswerStatus?
-    var value: String
-    var photos: [String]
+    var value: String?
+    var photos: [String]?
     
     enum AnswerStatus: Codable, RawRepresentable {
         case bool(Bool)

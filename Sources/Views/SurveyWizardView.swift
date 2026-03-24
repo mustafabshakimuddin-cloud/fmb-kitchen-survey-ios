@@ -162,7 +162,7 @@ struct QuestionView: View {
                     }
                 }
             } else {
-                TextEditor(text: Binding(get: { getAnswer().value }, set: { setAnswer(value: $0) }))
+                TextEditor(text: Binding(get: { getAnswer().value ?? "" }, set: { setAnswer(value: $0) }))
                     .frame(height: 80)
                     .padding(4)
                     .background(Color.slate50)
