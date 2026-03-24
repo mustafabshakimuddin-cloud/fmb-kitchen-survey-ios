@@ -249,9 +249,14 @@ struct AdminDashboardView: View {
                 } else {
                     List {
                         ForEach(filteredReports) { report in
-                            AuditRow(audit: report) {
-                                store.loadAudit(id: report.id)
-                            }
+                            AuditRow(
+                                audit: report,
+                                isSelected: false,
+                                onToggleSelection: {},
+                                onTap: {
+                                    Task { await store.loadAudit(id: report.id) }
+                                }
+                            )
                         }
                     }
                     .searchable(text: $searchText, prompt: "Search by Mauze or ID")
