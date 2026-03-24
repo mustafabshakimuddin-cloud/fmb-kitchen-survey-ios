@@ -3,13 +3,13 @@ import Foundation
 struct Audit: Codable, Identifiable {
     let id: String
     var userId: String?
-    var metadata: AuditMetadata
+    var metadata: AuditMetadata?
     var answers: [String: Answer]?
-    var progress: Int
-    let status: String
-    let createdAt: String?
-    let updatedAt: String?
-    let pdfUrl: String?
+    var progress: Int?
+    var status: String?
+    var createdAt: String?
+    var updatedAt: String?
+    var pdfUrl: String?
     
     enum CodingKeys: String, CodingKey {
         case id
