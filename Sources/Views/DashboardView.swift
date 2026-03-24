@@ -55,11 +55,6 @@ struct DashboardView: View {
             .sheet(isPresented: $showNewAuditSheet) {
                 NewAuditFormView()
             }
-            .alert("Error", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
-                Button("OK") { store.error = nil }
-            } message: {
-                Text(store.error?.localizedDescription ?? "Unknown error")
-            }
         }
     }
     
@@ -103,8 +98,7 @@ struct DashboardView: View {
 }
 
 struct AuditRow: View {
-    @EnvironmentObject var store: SurveyStore
-    let audit: AuditSummary
+    let audit: Audit
     let isSelected: Bool
     let onToggleSelection: () -> Void
     
@@ -118,7 +112,7 @@ struct AuditRow: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(audit.location)
+                Text(audit.metadata.mauze)
                     .font(.headline)
                     .foregroundColor(.primary)
                 
@@ -128,13 +122,10 @@ struct AuditRow: View {
                 
                 HStack {
                     StatusBadge(status: audit.status)
-                    Text(audit.lastUpdated)
-                        .font(.system(size: 10))
+                    Text(audit.createdAt, style: .date)
+                        .font(.caption)
                         .foregroundColor(.secondary)
                 }
-            }
-            .onTapGesture {
-                onToggleSelection()
             }
             
             Spacer()
@@ -157,20 +148,9 @@ struct AuditRow: View {
             }
             .frame(width: 36, height: 36)
             
-            Button(action: {
-                if audit.status == "Completed", let urlString = audit.reportUrl, let url = URL(string: urlString) {
-                    UIApplication.shared.open(url)
-                } else {
-                    Task {
-                        await store.loadAudit(id: audit.id)
-                    }
-                }
-            }) {
-                Image(systemName: audit.status == "Completed" ? "doc.text.fill" : "chevron.right")
-                    .font(.caption2)
-                    .foregroundColor(.blue)
-                    .padding(8)
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundColor(.slate400)
         }
         .padding()
         .background(Color.white)
@@ -217,6 +197,10 @@ struct NewAuditFormView: View {
                     }
                     .disabled(mauze.isEmpty)
                 }
+            }
+        }
+    }
+}
             }
         }
     }

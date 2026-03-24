@@ -1,16 +1,21 @@
 import Foundation
 import GoogleGenerativeAI
 
+enum APIError: Error {
+    case invalidURL
+    case invalidResponse
+    case networkError(Error)
+}
+
 class APIService {
     static let shared = APIService()
-    
-    let baseURL = Constants.cloudflareApiUrl
-    let scriptURL = Constants.gasScriptUrl
-    let geminiApiKey = Constants.geminiApiKey
-    
+    private let baseURL = Constants.baseURL
+    private let geminiApiKey = Constants.geminiApiKey
     private let session = URLSession.shared
     
-    // MARK: - Cloudflare API (NeonDB)
+    private init() {}
+    
+    // MARK: - Audits
     
     func fetchAudits(userId: String) async throws -> [AuditSummary] {
         var components = URLComponents(string: baseURL)!
@@ -22,6 +27,10 @@ class APIService {
         let (data, response) = try await session.data(from: components.url!)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
             throw APIError.invalidResponse
+        }
+        
+        struct AuditSummaryListResponse: Codable {
+            let audits: [AuditSummary]
         }
         
         let result = try JSONDecoder().decode(AuditSummaryListResponse.self, from: data)
@@ -63,7 +72,13 @@ class APIService {
             "progress": progress,
             "data": [
                 "metadata": ["its": metadata.its, "mauze": metadata.mauze],
-                "answers": try? JSONSerialization.jsonObject(with: JSONEncoder().encode(answers))
+                "answers": answers.reduce(into: [String: Any]()) { dict, pair in
+                    dict[pair.key] = [
+                        "status": pair.value.status?.rawValue,
+                        "value": pair.value.value,
+                        "photos": pair.value.photos ?? []
+                    ]
+                }
             ]
         ]
         
@@ -74,17 +89,17 @@ class APIService {
         
         let (_, response) = try await session.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw APIError.saveFailed
+            throw APIError.invalidResponse
         }
     }
     
-    func submitAudit(auditId: String, userId: String, reportData: [SectionSnapshot], pdfUrl: String?) async throws {
+    func submitAudit(auditId: String, userId: String, reportData: [SectionSnapshot], pdfUrl: String) async throws {
         let payload: [String: Any] = [
             "action": "submit",
             "auditId": auditId,
             "userId": userId,
-            "reportData": try? JSONSerialization.jsonObject(with: JSONEncoder().encode(reportData)),
-            "pdfUrl": pdfUrl as Any
+            "reportData": try JSONSerialization.jsonObject(with: JSONEncoder().encode(reportData)),
+            "pdfUrl": pdfUrl
         ]
         
         var request = URLRequest(url: URL(string: baseURL)!)
@@ -94,38 +109,38 @@ class APIService {
         
         let (_, response) = try await session.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw APIError.submitFailed
+            throw APIError.invalidResponse
         }
     }
     
-    // MARK: - Google Apps Script (PDF Generation)
+    // MARK: - PDF Generation (Google Apps Script)
     
-    func generatePDF(auditId: String, userId: String, metadata: AuditMetadata, answers: [String: Answer], reportData: [SectionSnapshot]) async throws -> String? {
+    func generatePDF(auditId: String, userId: String, metadata: AuditMetadata, answers: [String: Answer], reportData: [SectionSnapshot]) async throws -> String {
+        let gasURL = Constants.gasURL
         let payload: [String: Any] = [
-            "action": "submit",
             "auditId": auditId,
             "userId": userId,
             "metadata": ["its": metadata.its, "mauze": metadata.mauze],
-            "answers": try? JSONSerialization.jsonObject(with: JSONEncoder().encode(answers)),
-            "reportData": try? JSONSerialization.jsonObject(with: JSONEncoder().encode(reportData))
+            "answers": answers.reduce(into: [String: Any]()) { dict, pair in
+                dict[pair.key] = ["status": pair.value.status?.rawValue, "value": pair.value.value]
+            },
+            "reportData": try JSONSerialization.jsonObject(with: JSONEncoder().encode(reportData))
         ]
         
-        var request = URLRequest(url: URL(string: scriptURL)!)
+        var request = URLRequest(url: URL(string: gasURL)!)
         request.httpMethod = "POST"
-        request.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: payload)
         
         let (data, response) = try await session.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-            throw APIError.pdfGenerationFailed
+            throw APIError.invalidResponse
         }
         
-        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let url = json["url"] as? String ?? json["reportUrl"] as? String {
-            return url
+        struct GASResponse: Codable {
+            let pdfUrl: String
         }
-        
-        return nil
+        let result = try JSONDecoder().decode(GASResponse.self, from: data)
+        return result.pdfUrl
     }
     
     // MARK: - Gemini AI
@@ -146,7 +161,7 @@ class APIService {
                 .map { ($0.value.value ?? "").isEmpty ? $0.key : ($0.value.value ?? "") }
                 .prefix(10) ?? []
             return """
-            ID: \(r.id)
+            ID: \(r.id ?? "N/A")
             Kitchen: \(r.metadata?.mauze ?? "Unknown")
             Date: \(r.createdAt ?? "N/A")
             Status: \(r.status ?? "N/A")
@@ -155,57 +170,13 @@ class APIService {
             """
         }.joined(separator: "\n---\n")
         
-        let systemPrompt = """
-        You are an FMB Analyst.
-        CONTEXT: The user has selected the following \(reports.count) reports for analysis:
-        \(contextData)
+        let systemPrompt = "You are the FMB Audit Assistant. Use the following audit context to answer questions: \n\n\(contextData)\n\nPlease keep responses professional and concise."
         
-        INSTRUCTIONS:
-        Answer the question based ONLY on the selected reports above.
-        If the answer is not in these reports, say "I don't see that in the selected reports."
-        ALWAYS provide the "PDF Link" formatted as a clickable Markdown link: [Click Here to View PDF](URL).
-        """
-        
-        var history: [ModelContent] = [
-            try ModelContent(role: "user", parts: [systemPrompt]),
-            try ModelContent(role: "model", parts: ["I am analyzing the \(reports.count) selected reports. What would you like to know?"])
-        ]
-        
-        for msg in messages.dropLast() {
-            if let content = try? ModelContent(role: msg.role, parts: [msg.text]) {
-                history.append(content)
-            }
+        let chatHistory = messages.map { m in
+            ModelContent(role: m.role == "user" ? "user" : "model", parts: [TextPart(m.text)])
         }
         
-        let chat = model.startChat(history: history)
-        let response = try await chat.sendMessage(messages.last!.text)
-        return response.text ?? "No response"
-    }
-}
-
-// Support Structs
-struct AuditSummaryListResponse: Codable {
-    let audits: [AuditSummary]
-}
-
-struct ChatMessage: Identifiable {
-    let id = UUID()
-    let role: String // "user" or "model"
-    let text: String
-}
-
-enum APIError: Error {
-    case invalidResponse
-    case saveFailed
-    case submitFailed
-    case pdfGenerationFailed
-}
-
-extension Answer.AnswerStatus {
-    var isFailure: Bool {
-        switch self {
-        case .bool(let b): return !b
-        case .string(let s): return s.lowercased() == "fail"
-        }
+        let response = try await model.generateContent([ModelContent(role: "user", parts: [TextPart(systemPrompt)])] + chatHistory)
+        return response.text ?? "I'm sorry, I couldn't generate a response."
     }
 }

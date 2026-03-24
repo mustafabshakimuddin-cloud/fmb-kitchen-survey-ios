@@ -79,8 +79,8 @@ struct SurveyWizardView: View {
         Task {
             if let audit = store.currentAudit {
                 try? await APIService.shared.saveAudit(
-                    auditId: audit.id ?? "",
-                    metadata: audit.metadata ?? AuditMetadata(its: store.userId, mauze: "Unknown"),
+                    auditId: audit.id,
+                    metadata: audit.metadata,
                     answers: audit.answers ?? [:],
                     progress: calculateProgress()
                 )
@@ -104,16 +104,16 @@ struct SurveyWizardView: View {
                 
                 // 2. Generate PDF via GAS
                 let pdfUrl = try await APIService.shared.generatePDF(
-                    auditId: audit.id ?? "",
+                    auditId: audit.id,
                     userId: store.userId,
-                    metadata: audit.metadata ?? AuditMetadata(its: store.userId, mauze: "Unknown"),
+                    metadata: audit.metadata,
                     answers: audit.answers ?? [:],
                     reportData: snapshots
                 )
                 
                 // 3. Submit to Cloudflare/NeonDB
                 try await APIService.shared.submitAudit(
-                    auditId: audit.id ?? "",
+                    auditId: audit.id,
                     userId: store.userId,
                     reportData: snapshots,
                     pdfUrl: pdfUrl
@@ -162,7 +162,7 @@ struct QuestionView: View {
                     }
                 }
             } else {
-                TextEditor(text: Binding(get: { getAnswer().value ?? "" }, set: { setAnswer(value: $0) }))
+                TextEditor(text: Binding(get: { getAnswer().value }, set: { setAnswer(value: $0) }))
                     .frame(height: 80)
                     .padding(4)
                     .background(Color.slate50)

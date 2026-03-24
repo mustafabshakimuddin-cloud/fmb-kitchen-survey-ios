@@ -16,18 +16,17 @@ class SurveyStore: ObservableObject {
     
     func refreshAudits() async {
         guard !userId.isEmpty else { return }
-        isLoading = true
+        await MainActor.run { isLoading = true }
         do {
-            audits = try await APIService.shared.fetchAudits(userId: userId)
+            let fetched = try await APIService.shared.fetchAudits(userId: userId)
+            await MainActor.run { self.audits = fetched }
         } catch {
-            self.error = error
+            await MainActor.run { self.error = error }
         }
-        isLoading = false
+        await MainActor.run { isLoading = false }
     }
     
     func startNewAudit(metadata: AuditMetadata) {
-        // In a real app, we'd call a 'create' endpoint. 
-        // For now, let's assume we create a local draft and 'save' it.
         let now = ISO8601DateFormatter().string(from: Date())
         let newAudit = Audit(
             id: UUID().uuidString,
@@ -45,16 +44,20 @@ class SurveyStore: ObservableObject {
     
     func updateAnswer(sectionId: String, itemIndex: Int, answer: Answer) {
         let key = "\(sectionId)-\(itemIndex)"
+        if currentAudit?.answers == nil {
+            currentAudit?.answers = [:]
+        }
         currentAudit?.answers?[key] = answer
     }
     
     func loadAudit(id: String) async {
-        isLoading = true
+        await MainActor.run { isLoading = true }
         do {
-            currentAudit = try await APIService.shared.fetchAuditDetails(auditId: id)
+            let detail = try await APIService.shared.fetchAuditDetails(auditId: id)
+            await MainActor.run { self.currentAudit = detail }
         } catch {
-            self.error = error
+            await MainActor.run { self.error = error }
         }
-        isLoading = false
+        await MainActor.run { isLoading = false }
     }
 }
