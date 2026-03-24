@@ -10,8 +10,19 @@ struct SurveyWizardView: View {
         NavigationView {
             VStack {
                 // Progress Bar
-                ProgressView(value: Double(currentSectionIndex + 1), total: Double(ChecklistData.allSections.count))
-                    .padding()
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Section \(currentSectionIndex + 1) of \(ChecklistData.allSections.count)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text("\(Int((Double(currentSectionIndex + 1) / Double(ChecklistData.allSections.count)) * 100))%")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    ProgressView(value: Double(currentSectionIndex + 1), total: Double(ChecklistData.allSections.count))
+                }
+                .padding()
                 
                 // Section Title
                 Text(ChecklistData.allSections[currentSectionIndex].title)
@@ -63,7 +74,7 @@ struct SurveyWizardView: View {
                 .background(Color.white)
                 .shadow(radius: 2)
             }
-            .navigationTitle("Survey")
+            .navigationTitle(ChecklistData.allSections[currentSectionIndex].title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -87,7 +98,9 @@ struct SurveyWizardView: View {
                     progress: calculateProgress()
                 )
             }
-            dismiss()
+            await MainActor.run {
+                store.clearCurrentAudit()
+            }
         }
     }
     
@@ -125,7 +138,7 @@ struct SurveyWizardView: View {
                 
                 await MainActor.run {
                     isSubmitting = false
-                    dismiss()
+                    store.clearCurrentAudit()
                 }
             } catch {
                 print("Submit error: \(error)")
