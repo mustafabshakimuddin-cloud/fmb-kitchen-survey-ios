@@ -127,6 +127,9 @@ struct AuditRow: View {
                         .foregroundColor(.secondary)
                 }
             }
+            .onTapGesture {
+                onToggleSelection()
+            }
             
             Spacer()
             
@@ -148,9 +151,16 @@ struct AuditRow: View {
             }
             .frame(width: 36, height: 36)
             
-            Image(systemName: "chevron.right")
-                .font(.caption2)
-                .foregroundColor(.slate400)
+            Button(action: {
+                Task {
+                    await store.loadAudit(id: audit.id)
+                }
+            }) {
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundColor(.blue)
+                    .padding(8)
+            }
         }
         .padding()
         .background(Color.white)
