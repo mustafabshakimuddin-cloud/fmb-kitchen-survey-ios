@@ -55,6 +55,11 @@ struct DashboardView: View {
             .sheet(isPresented: $showNewAuditSheet) {
                 NewAuditFormView()
             }
+            .alert("Error", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) {
+                Button("OK") { store.error = nil }
+            } message: {
+                Text(store.error?.localizedDescription ?? "Unknown error")
+            }
         }
     }
     
