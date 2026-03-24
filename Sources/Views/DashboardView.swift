@@ -98,6 +98,7 @@ struct DashboardView: View {
 }
 
 struct AuditRow: View {
+    @EnvironmentObject var store: SurveyStore
     let audit: AuditSummary
     let isSelected: Bool
     let onToggleSelection: () -> Void
