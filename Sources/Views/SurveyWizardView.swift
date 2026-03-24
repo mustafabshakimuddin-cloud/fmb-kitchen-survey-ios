@@ -77,10 +77,12 @@ struct SurveyWizardView: View {
     
     func saveAndExit() {
         Task {
-            if let audit = store.currentAudit {
+            if let audit = store.currentAudit,
+               let auditId = audit.id,
+               let metadata = audit.metadata {
                 try? await APIService.shared.saveAudit(
-                    auditId: audit.id,
-                    metadata: audit.metadata,
+                    auditId: auditId,
+                    metadata: metadata,
                     answers: audit.answers ?? [:],
                     progress: calculateProgress()
                 )
@@ -93,7 +95,9 @@ struct SurveyWizardView: View {
         isSubmitting = true
         Task {
             do {
-                guard let audit = store.currentAudit else { return }
+                guard let audit = store.currentAudit,
+                      let auditId = audit.id,
+                      let metadata = audit.metadata else { return }
                 
                 // 1. Generate Snapshots
                 let snapshots = ChecklistData.allSections.map { section in
@@ -104,16 +108,16 @@ struct SurveyWizardView: View {
                 
                 // 2. Generate PDF via GAS
                 let pdfUrl = try await APIService.shared.generatePDF(
-                    auditId: audit.id,
+                    auditId: auditId,
                     userId: store.userId,
-                    metadata: audit.metadata,
+                    metadata: metadata,
                     answers: audit.answers ?? [:],
                     reportData: snapshots
                 )
                 
                 // 3. Submit to Cloudflare/NeonDB
                 try await APIService.shared.submitAudit(
-                    auditId: audit.id,
+                    auditId: auditId,
                     userId: store.userId,
                     reportData: snapshots,
                     pdfUrl: pdfUrl
@@ -162,7 +166,7 @@ struct QuestionView: View {
                     }
                 }
             } else {
-                TextEditor(text: Binding(get: { getAnswer().value }, set: { setAnswer(value: $0) }))
+                TextEditor(text: Binding(get: { getAnswer().value ?? "" }, set: { setAnswer(value: $0) }))
                     .frame(height: 80)
                     .padding(4)
                     .background(Color.slate50)
