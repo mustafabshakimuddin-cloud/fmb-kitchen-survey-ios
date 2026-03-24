@@ -1,5 +1,5 @@
 import SwiftUI
-import ReactMarkdown // Note: I will use a SwiftUI-friendly Markdown viewer like 'MarkdownUI' if available, or simplified view.
+// import ReactMarkdown // Removed missing dependency
 
 struct ChatbotView: View {
     @Environment(\.dismiss) var dismiss

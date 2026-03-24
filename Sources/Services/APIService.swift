@@ -129,12 +129,14 @@ class APIService {
         """
         
         var history: [ModelContent] = [
-            ModelContent(role: "user", parts: [systemPrompt]),
-            ModelContent(role: "model", parts: ["I am analyzing the \(reports.count) selected reports. What would you like to know?"])
+            try ModelContent(role: "user", parts: [systemPrompt]),
+            try ModelContent(role: "model", parts: ["I am analyzing the \(reports.count) selected reports. What would you like to know?"])
         ]
         
         for msg in messages.dropLast() {
-            history.append(ModelContent(role: msg.role, parts: [msg.text]))
+            if let content = try? ModelContent(role: msg.role, parts: [msg.text]) {
+                history.append(content)
+            }
         }
         
         let chat = model.startChat(history: history)

@@ -1,0 +1,23 @@
+# Xcode
+#
+build/
+DerivedData/
+*.hmap
+# *.ipa (User wants it in the repo)
+# *.xcarchive (User wants it in the repo)
+*.xccheckout
+*.xcrecord
+*.xcscheme
+*.xcworkspace
+!default.xcscheme
+!default.xcworkspace
+xcuserdata/
+
+# Swift Package Manager
+#
+.build/
+.swiftpm/
+
+# OS X
+#
+.DS_Store

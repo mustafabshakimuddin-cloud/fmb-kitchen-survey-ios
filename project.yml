@@ -1,0 +1,21 @@
+name: KitchenSurvey
+options:
+  bundleIdPrefix: com.fmb.kitchensurvey
+targets:
+  KitchenSurvey:
+    type: application
+    platform: iOS
+    deploymentTarget: "15.0"
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fmb.kitchensurvey
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_FILE: Sources/Info.plist
+    dependencies:
+      - package: GoogleGenerativeAI
+packages:
+  GoogleGenerativeAI:
+    url: https://github.com/google/generative-ai-swift
+    from: 0.4.0

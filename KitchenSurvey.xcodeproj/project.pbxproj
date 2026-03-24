@@ -1,0 +1,382 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		17259C0743AE166B90E7B694 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCD25CB787D9CF9354D56EA3 /* Models.swift */; };
+		233A42DBBD5D12CE75E2E3A4 /* ChatbotView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3CCED5B89C4639E11E7BC80 /* ChatbotView.swift */; };
+		2E016321687D492D4E8EFBE9 /* ChecklistData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EE6EA69B939519F582831D8 /* ChecklistData.swift */; };
+		45022160474557728DCBB218 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = C956112FC6FD369B92A405A6 /* Constants.swift */; };
+		47B626B4CA686214DEDAA7A0 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43182829B30B2ACB9954D8D8 /* LoginView.swift */; };
+		4D1D9D88D3598E1963244E23 /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AA8709C62B424349079D594 /* APIService.swift */; };
+		4EC73C1BB3DE4AFA794D62F4 /* SurveyWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 865CD7EB750DDD8618114079 /* SurveyWizardView.swift */; };
+		5418F93BDF9A6D7163345C0A /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A5FCAD20F58B18497B12841 /* DashboardView.swift */; };
+		5680A7D2936D44E375BD068C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222FD5879005261714AD1ED3 /* ContentView.swift */; };
+		80F56219F48D701D6B58283E /* GoogleGenerativeAI in Frameworks */ = {isa = PBXBuildFile; productRef = 9CDA146B03AC55FD5B6227EB /* GoogleGenerativeAI */; };
+		A338CAD05A49A0A66063D517 /* SurveyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB24FE9B8B23794C91A0AB6 /* SurveyStore.swift */; };
+		C1BC7DB7F9C0C8889FCEB7DD /* KitchenSurveyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		222FD5879005261714AD1ED3 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		41E6C4CB26DC4D4A6E0E7A92 /* KitchenSurvey.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = KitchenSurvey.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		43182829B30B2ACB9954D8D8 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		5FB24FE9B8B23794C91A0AB6 /* SurveyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurveyStore.swift; sourceTree = "<group>"; };
+		7EE6EA69B939519F582831D8 /* ChecklistData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChecklistData.swift; sourceTree = "<group>"; };
+		865CD7EB750DDD8618114079 /* SurveyWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurveyWizardView.swift; sourceTree = "<group>"; };
+		8A5FCAD20F58B18497B12841 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		8AA8709C62B424349079D594 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KitchenSurveyApp.swift; sourceTree = "<group>"; };
+		BCD25CB787D9CF9354D56EA3 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		C956112FC6FD369B92A405A6 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
+		E3CCED5B89C4639E11E7BC80 /* ChatbotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatbotView.swift; sourceTree = "<group>"; };
+		FB2424D94385825A69ADF95B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		B208740BE7868C875A6DE2DF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				80F56219F48D701D6B58283E /* GoogleGenerativeAI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		353866BE50493A14F79F4E35 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				7EE6EA69B939519F582831D8 /* ChecklistData.swift */,
+				BCD25CB787D9CF9354D56EA3 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		9DB0A5EAA585FC847DF89E78 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				41E6C4CB26DC4D4A6E0E7A92 /* KitchenSurvey.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A6D6E053E3E2F7F6A5FB5B7E /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				8AA8709C62B424349079D594 /* APIService.swift */,
+				C956112FC6FD369B92A405A6 /* Constants.swift */,
+				5FB24FE9B8B23794C91A0AB6 /* SurveyStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AAB83C38B6031AE065F83832 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				FB2424D94385825A69ADF95B /* Info.plist */,
+				9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */,
+				353866BE50493A14F79F4E35 /* Models */,
+				A6D6E053E3E2F7F6A5FB5B7E /* Services */,
+				F95E4F5E519AECF82854E2F5 /* Views */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		B34E0C2C77D0D17068D652EF = {
+			isa = PBXGroup;
+			children = (
+				AAB83C38B6031AE065F83832 /* Sources */,
+				9DB0A5EAA585FC847DF89E78 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		F95E4F5E519AECF82854E2F5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E3CCED5B89C4639E11E7BC80 /* ChatbotView.swift */,
+				222FD5879005261714AD1ED3 /* ContentView.swift */,
+				8A5FCAD20F58B18497B12841 /* DashboardView.swift */,
+				43182829B30B2ACB9954D8D8 /* LoginView.swift */,
+				865CD7EB750DDD8618114079 /* SurveyWizardView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		48036929A63F0C07EC927B20 /* KitchenSurvey */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 547CB809534625AED36C79CC /* Build configuration list for PBXNativeTarget "KitchenSurvey" */;
+			buildPhases = (
+				7431A248BA012043CA5E9A5D /* Sources */,
+				B208740BE7868C875A6DE2DF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = KitchenSurvey;
+			packageProductDependencies = (
+				9CDA146B03AC55FD5B6227EB /* GoogleGenerativeAI */,
+			);
+			productName = KitchenSurvey;
+			productReference = 41E6C4CB26DC4D4A6E0E7A92 /* KitchenSurvey.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		792FA062958973D42B9D1D75 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = F970556DBDB3C927DE4D7E46 /* Build configuration list for PBXProject "KitchenSurvey" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B34E0C2C77D0D17068D652EF;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				DF6FAAA2996983CFD8BFDB75 /* XCRemoteSwiftPackageReference "generative-ai-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 9DB0A5EAA585FC847DF89E78 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				48036929A63F0C07EC927B20 /* KitchenSurvey */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7431A248BA012043CA5E9A5D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4D1D9D88D3598E1963244E23 /* APIService.swift in Sources */,
+				233A42DBBD5D12CE75E2E3A4 /* ChatbotView.swift in Sources */,
+				2E016321687D492D4E8EFBE9 /* ChecklistData.swift in Sources */,
+				45022160474557728DCBB218 /* Constants.swift in Sources */,
+				5680A7D2936D44E375BD068C /* ContentView.swift in Sources */,
+				5418F93BDF9A6D7163345C0A /* DashboardView.swift in Sources */,
+				C1BC7DB7F9C0C8889FCEB7DD /* KitchenSurveyApp.swift in Sources */,
+				47B626B4CA686214DEDAA7A0 /* LoginView.swift in Sources */,
+				17259C0743AE166B90E7B694 /* Models.swift in Sources */,
+				A338CAD05A49A0A66063D517 /* SurveyStore.swift in Sources */,
+				4EC73C1BB3DE4AFA794D62F4 /* SurveyWizardView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		2685CDF0C6592045303E8601 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		5ABFE9F6E195F99963CBEA55 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		E49A02FCF9303986CFBB40F9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.fmb.kitchensurvey;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		F898B8B5F5C2F7D651584AC5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = Sources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.fmb.kitchensurvey;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		547CB809534625AED36C79CC /* Build configuration list for PBXNativeTarget "KitchenSurvey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E49A02FCF9303986CFBB40F9 /* Debug */,
+				F898B8B5F5C2F7D651584AC5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		F970556DBDB3C927DE4D7E46 /* Build configuration list for PBXProject "KitchenSurvey" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2685CDF0C6592045303E8601 /* Debug */,
+				5ABFE9F6E195F99963CBEA55 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DF6FAAA2996983CFD8BFDB75 /* XCRemoteSwiftPackageReference "generative-ai-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/generative-ai-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.4.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9CDA146B03AC55FD5B6227EB /* GoogleGenerativeAI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DF6FAAA2996983CFD8BFDB75 /* XCRemoteSwiftPackageReference "generative-ai-swift" */;
+			productName = GoogleGenerativeAI;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 792FA062958973D42B9D1D75 /* Project object */;
+}
