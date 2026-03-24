@@ -158,11 +158,15 @@ struct AuditRow: View {
             .frame(width: 36, height: 36)
             
             Button(action: {
-                Task {
-                    await store.loadAudit(id: audit.id)
+                if audit.status == "Completed", let urlString = audit.reportUrl, let url = URL(string: urlString) {
+                    UIApplication.shared.open(url)
+                } else {
+                    Task {
+                        await store.loadAudit(id: audit.id)
+                    }
                 }
             }) {
-                Image(systemName: "chevron.right")
+                Image(systemName: audit.status == "Completed" ? "doc.text.fill" : "chevron.right")
                     .font(.caption2)
                     .foregroundColor(.blue)
                     .padding(8)
