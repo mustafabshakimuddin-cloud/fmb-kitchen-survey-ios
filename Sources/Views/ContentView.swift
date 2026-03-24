@@ -5,8 +5,15 @@ struct ContentView: View {
     @EnvironmentObject var store: SurveyStore
     
     var body: some View {
-        Group {
-            if store.userId.isEmpty {
+            if store.isAdmin {
+                if let audit = store.currentAudit, let pdfUrl = audit.pdfUrl, let url = URL(string: pdfUrl) {
+                    SafariViewWrapper(url: url) {
+                        store.clearCurrentAudit()
+                    }
+                } else {
+                    AdminDashboardView()
+                }
+            } else if store.userId.isEmpty {
                 LoginView()
             } else if let audit = store.currentAudit {
                 if (audit.status == "submitted" || audit.status == "Completed"), let pdfUrl = audit.pdfUrl, let url = URL(string: pdfUrl) {

@@ -182,11 +182,6 @@ class APIService {
     
     // MARK: - Photo Uploads
     
-    struct UploadResponse: Codable {
-        let url: String?
-        let error: String?
-    }
-    
     func uploadPhoto(fileName: String, mimeType: String, base64Data: String) async throws -> String {
         let payload: [String: Any] = [
             "action": "upload",
@@ -212,6 +207,46 @@ class APIService {
             return photoUrl
         } else {
             throw NSError(domain: "UploadError", code: 0, userInfo: [NSLocalizedDescriptionKey: decoded.error ?? "Upload failed"])
+        }
+    }
+    
+    func fetchAllReports(page: Int) async throws -> [AuditSummary] {
+        let urlString = "\(baseURL)?action=getAllReports&page=\(page)"
+        guard let url = URL(string: urlString) else { throw APIError.invalidURL }
+        
+        let (data, response) = try await session.data(from: url)
+        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+            throw APIError.invalidResponse
+        }
+        
+        struct AdminReport: Codable {
+            let auditId: String
+            let userId: String
+            let timestamp: String
+            let pdfUrl: String?
+            let progress: Int?
+            let status: String?
+            let data: AdminData?
+            struct AdminData: Codable {
+                let metadata: AuditMetadata?
+            }
+        }
+        
+        struct AllReportsResponse: Codable {
+            let reports: [AdminReport]
+            let hasMore: Bool
+        }
+        
+        let decoded = try JSONDecoder().decode(AllReportsResponse.self, from: data)
+        return decoded.reports.map { r in
+            AuditSummary(
+                id: r.auditId,
+                location: r.data?.metadata?.mauze ?? "Unknown Location",
+                lastUpdated: r.timestamp,
+                progress: r.progress ?? 0,
+                status: (r.status == "submitted" || r.status == "Completed") ? "Completed" : "In Progress",
+                reportUrl: r.pdfUrl
+            )
         }
     }
 }

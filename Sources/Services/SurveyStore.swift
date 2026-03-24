@@ -11,6 +11,11 @@ class SurveyStore: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: Error?
     
+    @Published var isAdmin: Bool = UserDefaults.standard.bool(forKey: "fmb_audit_isAdmin") {
+        didSet { UserDefaults.standard.set(isAdmin, forKey: "fmb_audit_isAdmin") }
+    }
+    @Published var adminReports: [AuditSummary] = []
+    
     // Checklist Data
     let checklist: [SurveySection] = ChecklistData.allSections
     
@@ -63,5 +68,43 @@ class SurveyStore: ObservableObject {
     
     func clearCurrentAudit() {
         currentAudit = nil
+    }
+    
+    // MARK: - Admin Functions
+    
+    func loginAdmin(password: String) async -> Bool {
+        await MainActor.run { isLoading = true }
+        do {
+            // Match Web App's demo fallback and also could hit backend if token logic added later
+            let success = (password == "admin123")
+            await MainActor.run {
+                self.isAdmin = success
+                self.isLoading = false
+            }
+            return success
+        }
+    }
+    
+    func fetchAdminReports() async {
+        await MainActor.run { isLoading = true }
+        do {
+            let result = try await APIService.shared.fetchAllReports(page: 1)
+            await MainActor.run {
+                self.adminReports = result
+                self.isLoading = false
+            }
+        } catch {
+            print("Admin fetch error: \(error)")
+            await MainActor.run {
+                self.isLoading = false
+            }
+        }
+    }
+    
+    func logout() {
+        self.userId = ""
+        self.isAdmin = false
+        self.audits = []
+        self.adminReports = []
     }
 }
