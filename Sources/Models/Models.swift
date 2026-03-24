@@ -106,6 +106,9 @@ struct SectionSnapshot: Codable {
     let items: [ItemSnapshot]
 }
 
+struct ItemSnapshot: Codable {
+    let question: String
+    let type: String
     let answer: Answer
 }
 
