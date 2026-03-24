@@ -57,7 +57,6 @@ struct DashboardView: View {
             }
         }
     }
-}
     
     var auditList: some View {
         List {
