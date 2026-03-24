@@ -100,7 +100,6 @@ struct LoginView: View {
             store.userId = its
             isLoading = false
         }
-        }
     }
 }
 
