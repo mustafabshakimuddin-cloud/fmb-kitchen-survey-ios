@@ -12,7 +12,7 @@ struct Audit: Codable, Identifiable {
     let pdfUrl: String?
     
     enum CodingKeys: String, CodingKey {
-        case id = "auditId"
+        case id
         case userId
         case metadata
         case answers

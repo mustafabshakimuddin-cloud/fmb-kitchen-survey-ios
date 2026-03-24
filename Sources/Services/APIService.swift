@@ -40,16 +40,13 @@ class APIService {
             throw APIError.invalidResponse
         }
         
-        // The API returns { audit: { data: { metadata, answers, ... } } }
+        // The API returns { audit: { id, userId, metadata, answers, ... } }
         struct AuditResponse: Codable {
-            let audit: AuditDetail
-        }
-        struct AuditDetail: Codable {
-            let data: Audit
+            let audit: Audit
         }
         
         let result = try JSONDecoder().decode(AuditResponse.self, from: data)
-        return result.audit.data
+        return result.audit
     }
     
     func saveAudit(auditId: String, metadata: AuditMetadata, answers: [String: Answer], progress: Int) async throws {
