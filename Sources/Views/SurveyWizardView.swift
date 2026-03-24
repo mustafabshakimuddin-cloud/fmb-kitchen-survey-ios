@@ -80,7 +80,7 @@ struct SurveyWizardView: View {
             if let audit = store.currentAudit {
                 try? await APIService.shared.saveAudit(
                     auditId: audit.id,
-                    metadata: audit.metadata,
+                    metadata: audit.metadata ?? AuditMetadata(its: store.userId, mauze: "Unknown"),
                     answers: audit.answers ?? [:],
                     progress: calculateProgress()
                 )
@@ -106,7 +106,7 @@ struct SurveyWizardView: View {
                 let pdfUrl = try await APIService.shared.generatePDF(
                     auditId: audit.id,
                     userId: store.userId,
-                    metadata: audit.metadata,
+                    metadata: audit.metadata ?? AuditMetadata(its: store.userId, mauze: "Unknown"),
                     answers: audit.answers ?? [:],
                     reportData: snapshots
                 )

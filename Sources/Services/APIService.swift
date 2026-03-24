@@ -140,9 +140,9 @@ class APIService {
                 .prefix(10) ?? []
             return """
             ID: \(r.id)
-            Kitchen: \(r.metadata.mauze)
+            Kitchen: \(r.metadata?.mauze ?? "Unknown")
             Date: \(r.createdAt ?? "N/A")
-            Status: \(r.status)
+            Status: \(r.status ?? "N/A")
             PDF Link: \(r.pdfUrl ?? "N/A")
             Key Failures/Issues: \(failures.joined(separator: ", "))
             """
