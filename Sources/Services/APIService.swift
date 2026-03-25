@@ -1,5 +1,4 @@
 import Foundation
-import GoogleGenerativeAI
 
 enum APIError: Error {
     case invalidURL
@@ -11,7 +10,6 @@ enum APIError: Error {
 class APIService {
     static let shared = APIService()
     private let baseURL = Constants.cloudflareApiUrl
-    private let geminiApiKey = Constants.geminiApiKey
     private let session = URLSession.shared
     
     private init() {}
@@ -328,71 +326,53 @@ class APIService {
         }
     }
     
-    // MARK: - Gemini AI
+    // MARK: - Gemini AI (via Cloudflare proxy — API key stays server-side)
     
     func chatWithGemini(messages: [ChatMessage], reports: [AuditSummary]) async throws -> String {
-        // Fetch full details for selected reports (same as web's enrichment logic)
-        var fullAudits: [Audit] = []
-        for r in reports {
-            if let detail = try? await fetchAuditDetails(auditId: r.id) {
-                fullAudits.append(detail)
-            }
-        }
+        guard let url = URL(string: baseURL) else { throw APIError.invalidURL }
         
-        // Build context string (matching web's Chatbot.jsx)
-        let contextData = fullAudits.map { r in
-            let failures = r.answers?.filter { ($0.value.status?.isFail ?? false) }
-                .map { $0.key }
-                .prefix(20) ?? []
-            return """
-            ID: \(r.id ?? "N/A")
-            Kitchen: \(r.metadata?.mauze ?? "Unknown")
-            Date: \(r.createdAt ?? "N/A")
-            Status: \(r.status ?? "N/A")
-            PDF Link: \(r.pdfUrl ?? "N/A")
-            Key Failures/Issues: \(failures.joined(separator: ", "))
-            """
-        }.joined(separator: "\n---\n")
-        
-        let systemPrompt = """
-        You are an FMB Analyst.
-        CONTEXT: The user has MANUALLY SELECTED the following \(reports.count) reports for analysis:
-        \(contextData)
-        
-        INSTRUCTIONS:
-        Answer the question based ONLY on the selected reports above.
-        If the answer is not in these reports, say "I don't see that in the selected reports."
-        ALWAYS provide the "PDF Link" formatted as a clickable Markdown link: [Click Here to View PDF](URL).
-        """
-        
-        // Simple model init (no systemInstruction to avoid SDK version issues)
-        let model = GenerativeModel(
-            name: "gemini-2.0-flash",
-            apiKey: geminiApiKey
-        )
-        
-        // Build full content array exactly like web's Chatbot.jsx:
-        // [user: systemPrompt, model: ack, ...prior conversation..., user: latest question]
-        var contents: [ModelContent] = []
-        
-        // 1. System prompt as first user message (same as web)
-        contents.append(ModelContent(role: "user", parts: [.text(systemPrompt)]))
-        
-        // 2. Model acknowledgment
-        contents.append(ModelContent(role: "model", parts: [.text("I am analyzing the \(reports.count) selected reports. What would you like to know?")]))
-        
-        // 3. Add conversation history (skip the initial greeting, keep user/model pairs)
+        // Build conversation messages (skip initial greeting, same as web)
+        var conversationMessages: [[String: String]] = []
         for (index, msg) in messages.enumerated() {
-            // Skip the initial model greeting (index 0) — it's replaced by our ack above
-            if index == 0 && msg.role == "model" { continue }
-            let role = msg.role == "user" ? "user" : "model"
-            contents.append(ModelContent(role: role, parts: [.text(msg.text)]))
+            if index == 0 && msg.role == "model" { continue } // skip greeting
+            conversationMessages.append(["role": msg.role, "text": msg.text])
         }
         
-        print("🤖 Sending to Gemini with \(contents.count) content items, \(reports.count) reports")
+        // Build request body
+        let requestBody: [String: Any] = [
+            "action": "chat",
+            "messages": conversationMessages,
+            "reportIds": reports.map { $0.id }
+        ]
         
-        let response = try await model.generateContent(contents)
-        return response.text ?? "I'm sorry, I couldn't generate a response."
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        
+        print("🤖 Calling chat proxy with \(conversationMessages.count) messages, \(reports.count) reports")
+        
+        let (data, response) = try await session.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        
+        guard (200...299).contains(httpResponse.statusCode) else {
+            let errorText = String(data: data, encoding: .utf8) ?? "Unknown error"
+            print("🤖 Chat proxy error (\(httpResponse.statusCode)): \(errorText)")
+            throw APIError.serverError("Chat failed: \(httpResponse.statusCode)")
+        }
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw APIError.invalidResponse
+        }
+        
+        if let error = json["error"] as? String {
+            throw APIError.serverError(error)
+        }
+        
+        return json["response"] as? String ?? "I'm sorry, I couldn't generate a response."
     }
 
     
