@@ -9,8 +9,6 @@ struct DashboardView: View {
     @State private var showNewAuditModal = false
     @State private var newLocation: String = ""
     @State private var isCreating = false
-    @State private var safariURLString: String? = nil
-    @State private var showSafari = false
     
     var body: some View {
         NavigationView {
@@ -58,15 +56,6 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showChatbot) {
                 ChatbotView(selectedAudits: store.audits.filter { selectedAuditIds.contains($0.id) })
-            }
-            .fullScreenCover(isPresented: $showSafari) {
-                if let str = safariURLString, let url = URL(string: str) {
-                    SafariViewWrapper(url: url) {
-                        showSafari = false
-                        safariURLString = nil
-                    }
-                    .ignoresSafeArea()
-                }
             }
             // New Audit Modal (matches web's modal exactly)
             .alert("Start New Audit", isPresented: $showNewAuditModal) {
@@ -117,16 +106,9 @@ struct DashboardView: View {
                         }
                     },
                     onTap: {
-                        // Matches web: completed → open PDF, in-progress → open wizard
-                        if audit.status == "Completed" || audit.status == "submitted" {
-                            if let urlStr = audit.reportUrl {
-                                safariURLString = urlStr
-                                showSafari = true
-                            }
-                            // If no PDF URL, do nothing (matching web's alert behavior)
-                        } else {
-                            Task { await store.loadAudit(id: audit.id) }
-                        }
+                        // Always load the audit — ContentView handles routing:
+                        // completed+PDF → Safari, in-progress → Wizard
+                        Task { await store.loadAudit(id: audit.id) }
                     }
                 )
                 .listRowSeparator(.hidden)
