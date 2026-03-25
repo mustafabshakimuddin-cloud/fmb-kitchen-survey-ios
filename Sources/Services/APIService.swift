@@ -367,9 +367,9 @@ class APIService {
         
         // Use systemInstruction parameter (SDK v0.5.6)
         let model = GenerativeModel(
-            name: "gemini-2.5-flash",
+            name: "gemini-2.0-flash",
             apiKey: geminiApiKey,
-            systemInstruction: ModelContent(role: "system", parts: [.text(systemPrompt)])
+            systemInstruction: ModelContent(parts: [.text(systemPrompt)])
         )
         
         // Build chat history from prior messages (matching web's currentHistory)
