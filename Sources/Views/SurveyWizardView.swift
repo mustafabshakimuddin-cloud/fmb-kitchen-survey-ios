@@ -79,6 +79,7 @@ struct SurveyWizardView: View {
                     Button("Save & Exit") {
                         saveAndExit()
                     }
+                    .disabled(store.activeUploads > 0)
                 }
             }
         }
@@ -356,6 +357,11 @@ struct SurveyWizardView: View {
     // MARK: - Actions
     
     func saveAndExit() {
+        if store.activeUploads > 0 {
+            store.validationError = "Please wait for \(store.activeUploads) image(s) to finish uploading before leaving this audit."
+            return
+        }
+
         Task {
             if let audit = store.currentAudit,
                let auditId = audit.id,
