@@ -331,8 +331,7 @@ class APIService {
     // MARK: - Gemini AI
     
     func chatWithGemini(messages: [ChatMessage], reports: [AuditSummary]) async throws -> String {
-        let model = GenerativeModel(name: "gemini-1.5-flash", apiKey: geminiApiKey)
-        
+        // Fetch full details for selected reports (same as web's enrichment logic)
         var fullAudits: [Audit] = []
         for r in reports {
             if let detail = try? await fetchAuditDetails(auditId: r.id) {
@@ -340,10 +339,11 @@ class APIService {
             }
         }
         
+        // Build context string (matching web's Chatbot.jsx)
         let contextData = fullAudits.map { r in
             let failures = r.answers?.filter { ($0.value.status?.isFail ?? false) }
-                .map { ($0.value.value ?? "").isEmpty ? $0.key : ($0.value.value ?? "") }
-                .prefix(10) ?? []
+                .map { $0.key }
+                .prefix(20) ?? []
             return """
             ID: \(r.id ?? "N/A")
             Kitchen: \(r.metadata?.mauze ?? "Unknown")
@@ -354,15 +354,50 @@ class APIService {
             """
         }.joined(separator: "\n---\n")
         
-        let systemPrompt = "You are the FMB Audit Assistant. Use the following audit context to answer questions: \n\n\(contextData)\n\nPlease keep responses professional and concise."
+        let systemPrompt = """
+        You are an FMB Analyst.
+        CONTEXT: The user has MANUALLY SELECTED the following \(reports.count) reports for analysis:
+        \(contextData)
         
-        let chatHistory = try messages.map { m in
-            try ModelContent(role: m.role == "user" ? "user" : "model", parts: [m.text])
+        INSTRUCTIONS:
+        Answer the question based ONLY on the selected reports above.
+        If the answer is not in these reports, say "I don't see that in the selected reports."
+        ALWAYS provide the "PDF Link" formatted as a clickable Markdown link: [Click Here to View PDF](URL).
+        """
+        
+        // Use systemInstruction parameter (SDK v0.5.6)
+        let model = GenerativeModel(
+            name: "gemini-2.5-flash",
+            apiKey: geminiApiKey,
+            systemInstruction: ModelContent(role: "system", parts: [.text(systemPrompt)])
+        )
+        
+        // Build chat history from prior messages (matching web's currentHistory)
+        // Skip the first model message (greeting) and the latest user message (we'll send it via sendMessage)
+        var chatHistory: [ModelContent] = []
+        
+        // Add all prior messages except the last one (which we send as sendMessage)
+        for (index, msg) in messages.enumerated() {
+            if index == messages.count - 1 && msg.role == "user" {
+                // Skip the last user message — we'll send it separately
+                continue
+            }
+            let role = msg.role == "user" ? "user" : "model"
+            chatHistory.append(ModelContent(role: role, parts: [.text(msg.text)]))
         }
         
-        let response = try await model.generateContent([try ModelContent(role: "user", parts: [systemPrompt])] + chatHistory)
+        // Start chat with history (matching web's model.startChat({ history }))
+        let chat = model.startChat(history: chatHistory)
+        
+        // Send the latest user message
+        let lastUserMsg = messages.last(where: { $0.role == "user" })?.text ?? ""
+        
+        print("🤖 Sending to Gemini: \(lastUserMsg.prefix(50))... with \(reports.count) reports context")
+        
+        let response = try await chat.sendMessage(lastUserMsg)
         return response.text ?? "I'm sorry, I couldn't generate a response."
     }
+
     
     // MARK: - Admin: Fetch All Reports with Pagination (matches web's lazy loading)
     
