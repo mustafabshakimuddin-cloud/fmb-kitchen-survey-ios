@@ -319,7 +319,7 @@ class APIService {
             "userId": userId,
             "metadata": ["its": metadata.its ?? "", "mauze": metadata.mauze ?? ""],
             "answers": answers.reduce(into: [String: Any]()) { dict, pair in
-                dict[pair.key] = ["status": pair.value.status?.rawValue as Any, "value": pair.value.value as Any]
+                dict[pair.key] = ["status": pair.value.status?.rawValue as Any, "value": pair.value.value as Any, "photos": pair.value.photos ?? []]
             },
             "reportData": try JSONSerialization.jsonObject(with: JSONEncoder().encode(reportData))
         ]
