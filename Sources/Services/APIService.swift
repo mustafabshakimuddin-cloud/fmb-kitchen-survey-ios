@@ -365,36 +365,33 @@ class APIService {
         ALWAYS provide the "PDF Link" formatted as a clickable Markdown link: [Click Here to View PDF](URL).
         """
         
-        // Use systemInstruction parameter (SDK v0.5.6)
+        // Simple model init (no systemInstruction to avoid SDK version issues)
         let model = GenerativeModel(
             name: "gemini-2.0-flash",
-            apiKey: geminiApiKey,
-            systemInstruction: ModelContent(parts: [.text(systemPrompt)])
+            apiKey: geminiApiKey
         )
         
-        // Build chat history from prior messages (matching web's currentHistory)
-        // Skip the first model message (greeting) and the latest user message (we'll send it via sendMessage)
-        var chatHistory: [ModelContent] = []
+        // Build full content array exactly like web's Chatbot.jsx:
+        // [user: systemPrompt, model: ack, ...prior conversation..., user: latest question]
+        var contents: [ModelContent] = []
         
-        // Add all prior messages except the last one (which we send as sendMessage)
+        // 1. System prompt as first user message (same as web)
+        contents.append(ModelContent(role: "user", parts: [.text(systemPrompt)]))
+        
+        // 2. Model acknowledgment
+        contents.append(ModelContent(role: "model", parts: [.text("I am analyzing the \(reports.count) selected reports. What would you like to know?")]))
+        
+        // 3. Add conversation history (skip the initial greeting, keep user/model pairs)
         for (index, msg) in messages.enumerated() {
-            if index == messages.count - 1 && msg.role == "user" {
-                // Skip the last user message — we'll send it separately
-                continue
-            }
+            // Skip the initial model greeting (index 0) — it's replaced by our ack above
+            if index == 0 && msg.role == "model" { continue }
             let role = msg.role == "user" ? "user" : "model"
-            chatHistory.append(ModelContent(role: role, parts: [.text(msg.text)]))
+            contents.append(ModelContent(role: role, parts: [.text(msg.text)]))
         }
         
-        // Start chat with history (matching web's model.startChat({ history }))
-        let chat = model.startChat(history: chatHistory)
+        print("🤖 Sending to Gemini with \(contents.count) content items, \(reports.count) reports")
         
-        // Send the latest user message
-        let lastUserMsg = messages.last(where: { $0.role == "user" })?.text ?? ""
-        
-        print("🤖 Sending to Gemini: \(lastUserMsg.prefix(50))... with \(reports.count) reports context")
-        
-        let response = try await chat.sendMessage(lastUserMsg)
+        let response = try await model.generateContent(contents)
         return response.text ?? "I'm sorry, I couldn't generate a response."
     }
 
