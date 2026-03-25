@@ -595,6 +595,7 @@ struct AdminDashboardView: View {
                 AdminReportRow(
                     report: report,
                     isSelected: selectedIds.contains(report.id),
+                    isLoading: store.isLoadingDetails,
                     onToggle: {
                         if selectedIds.contains(report.id) {
                             selectedIds.remove(report.id)
@@ -830,6 +831,7 @@ struct AdminDashboardView: View {
 struct AdminReportRow: View {
     let report: AuditSummary
     let isSelected: Bool
+    let isLoading: Bool
     let onToggle: () -> Void
     let onTap: () -> Void
     
@@ -849,6 +851,7 @@ struct AdminReportRow: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isLoading)
             
             Button(action: onTap) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -898,6 +901,7 @@ struct AdminReportRow: View {
                 }
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(isLoading)
         }
         .padding(12)
         .background(

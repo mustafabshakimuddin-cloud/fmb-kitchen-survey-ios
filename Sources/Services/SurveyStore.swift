@@ -409,8 +409,22 @@ class SurveyStore: ObservableObject {
         }
     }
     
-    func fetchAdminReportDetails(auditId: String) async {
-        await MainActor.run { isLoadingDetails = true }
+    func fetchAdminReportDetails(auditId: String, attempt: Int = 0) async {
+        guard !isLoadingDetails else { return }
+        await MainActor.run {
+            isLoadingDetails = true
+            selectedAdminReport = Audit(
+                id: auditId,
+                userId: nil,
+                metadata: nil,
+                answers: nil,
+                progress: nil,
+                status: nil,
+                createdAt: nil,
+                updatedAt: nil,
+                pdfUrl: nil
+            )
+        }
         do {
             let detail = try await APIService.shared.fetchAuditDetails(auditId: auditId)
             await MainActor.run {
@@ -418,8 +432,17 @@ class SurveyStore: ObservableObject {
                 self.isLoadingDetails = false
             }
         } catch {
+            if attempt == 0 {
+                print("Admin detail fetch retry after error: \(error)")
+                await MainActor.run { self.isLoadingDetails = false }
+                await fetchAdminReportDetails(auditId: auditId, attempt: 1)
+                return
+            }
             print("Admin detail fetch error: \(error)")
-            await MainActor.run { self.isLoadingDetails = false }
+            await MainActor.run {
+                self.selectedAdminReport = nil
+                self.isLoadingDetails = false
+            }
         }
     }
     
