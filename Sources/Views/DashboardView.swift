@@ -1,7 +1,6 @@
 import SwiftUI
 import SafariServices
 
-
 struct DashboardView: View {
     @EnvironmentObject var store: SurveyStore
     @State private var selectedAuditIds: Set<String> = []
@@ -10,20 +9,40 @@ struct DashboardView: View {
     @State private var newLocation: String = ""
     @State private var isCreating = false
     
+    // Detail modal state (same pattern as admin dashboard which works)
+    @State private var selectedCompletedAudit: Audit? = nil
+    @State private var isLoadingDetails = false
+    
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if store.isLoading && store.audits.isEmpty {
-                    Spacer()
-                    ProgressView()
-                        .scaleEffect(1.5)
-                    Spacer()
-                } else if let error = store.error {
-                    errorView(error: error)
-                } else if store.audits.isEmpty {
-                    emptyState
-                } else {
-                    auditList
+            ZStack {
+                VStack(spacing: 0) {
+                    if store.isLoading && store.audits.isEmpty {
+                        Spacer()
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Spacer()
+                    } else if store.audits.isEmpty {
+                        emptyState
+                    } else {
+                        auditList
+                    }
+                }
+                
+                // Detail Modal for completed audits (same pattern as admin dashboard)
+                if let report = selectedCompletedAudit {
+                    auditDetailModal(report: report)
+                }
+                
+                // Loading overlay
+                if isLoadingDetails {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    ProgressView("Loading report...")
+                        .padding(24)
+                        .background(Color.white)
+                        .cornerRadius(12)
+                        .shadow(radius: 10)
                 }
             }
             .navigationTitle("Audits")
@@ -57,7 +76,6 @@ struct DashboardView: View {
             .sheet(isPresented: $showChatbot) {
                 ChatbotView(selectedAudits: store.audits.filter { selectedAuditIds.contains($0.id) })
             }
-            // New Audit Modal (matches web's modal exactly)
             .alert("Start New Audit", isPresented: $showNewAuditModal) {
                 TextField("Kitchen Name / Mauze", text: $newLocation)
                 Button("Cancel", role: .cancel) { newLocation = "" }
@@ -71,14 +89,13 @@ struct DashboardView: View {
         }
     }
     
-    // MARK: - Create Audit (matches web's handleCreateAudit via API)
+    // MARK: - Create Audit
     
     func handleCreateAudit() {
         let location = newLocation.trimmingCharacters(in: .whitespaces)
         guard !location.isEmpty else { return }
         newLocation = ""
         isCreating = true
-        
         Task {
             if let auditId = await store.createAudit(location: location) {
                 await store.loadAudit(id: auditId)
@@ -99,16 +116,18 @@ struct DashboardView: View {
                         if selectedAuditIds.contains(audit.id) {
                             selectedAuditIds.remove(audit.id)
                         } else {
-                            if selectedAuditIds.count >= 20 {
-                                return // Max 20 like web
-                            }
+                            if selectedAuditIds.count >= 20 { return }
                             selectedAuditIds.insert(audit.id)
                         }
                     },
                     onTap: {
-                        // Always load the audit — ContentView handles routing:
-                        // completed+PDF → Safari, in-progress → Wizard
-                        Task { await store.loadAudit(id: audit.id) }
+                        if audit.status == "Completed" || audit.status == "submitted" {
+                            // Completed → show detail modal with PDF link (same as admin)
+                            Task { await fetchAndShowDetails(auditId: audit.id) }
+                        } else {
+                            // In-progress → open wizard via ContentView routing
+                            Task { await store.loadAudit(id: audit.id) }
+                        }
                     }
                 )
                 .listRowSeparator(.hidden)
@@ -121,6 +140,187 @@ struct DashboardView: View {
         }
     }
     
+    // MARK: - Fetch and Show Detail (identical pattern to admin dashboard)
+    
+    func fetchAndShowDetails(auditId: String) async {
+        await MainActor.run { isLoadingDetails = true }
+        do {
+            let detail = try await APIService.shared.fetchAuditDetails(auditId: auditId)
+            await MainActor.run {
+                selectedCompletedAudit = detail
+                isLoadingDetails = false
+            }
+        } catch {
+            print("Detail fetch error: \(error)")
+            await MainActor.run { isLoadingDetails = false }
+        }
+    }
+    
+    // MARK: - Detail Modal (replicated from working admin dashboard)
+    
+    func auditDetailModal(report: Audit) -> some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+                .onTapGesture { selectedCompletedAudit = nil }
+            
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(report.metadata?.mauze ?? "Unknown Kitchen")
+                            .font(.title3.bold())
+                            .foregroundColor(.slate800)
+                        Text("ITS: \(report.metadata?.its ?? "N/A") • \(report.createdAt ?? "")")
+                            .font(.caption)
+                            .foregroundColor(.slate500)
+                    }
+                    
+                    Spacer()
+                    
+                    if let pdfUrl = report.pdfUrl, let url = URL(string: pdfUrl) {
+                        Link(destination: url) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "doc.text.fill")
+                                Text("View PDF")
+                            }
+                            .font(.caption.bold())
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                        }
+                    }
+                    
+                    Button(action: { selectedCompletedAudit = nil }) {
+                        Image(systemName: "xmark")
+                            .font(.title3)
+                            .foregroundColor(.slate500)
+                            .padding(8)
+                            .background(Color.slate100)
+                            .clipShape(Circle())
+                    }
+                }
+                .padding()
+                .background(Color.slate50)
+                
+                Divider()
+                
+                // Report Content
+                ScrollView {
+                    if let answers = report.answers, !answers.isEmpty {
+                        VStack(spacing: 16) {
+                            ForEach(ChecklistData.allSections) { section in
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(section.title)
+                                        .font(.headline)
+                                        .foregroundColor(.blue)
+                                        .padding(.bottom, 4)
+                                    
+                                    ForEach(section.items.indices, id: \.self) { idx in
+                                        let key = "\(section.id)-\(idx)"
+                                        let ans = answers[key]
+                                        
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(section.items[idx].q)
+                                                .font(.caption)
+                                                .fontWeight(.semibold)
+                                                .foregroundColor(.slate500)
+                                                .textCase(.uppercase)
+                                            
+                                            if section.items[idx].type == .text {
+                                                let val = ans?.value?.trimmingCharacters(in: .whitespaces) ?? ""
+                                                Text(val.isEmpty ? "Not Filled" : val)
+                                                    .font(.subheadline.weight(.medium))
+                                                    .foregroundColor(val.isEmpty ? .slate300 : .slate800)
+                                                    .italic(val.isEmpty)
+                                            } else {
+                                                userStatusDisplay(status: ans?.status)
+                                            }
+                                            
+                                            if let photos = ans?.photos, !photos.isEmpty {
+                                                ScrollView(.horizontal, showsIndicators: false) {
+                                                    HStack(spacing: 8) {
+                                                        ForEach(photos, id: \.self) { photoUrl in
+                                                            AsyncImage(url: URL(string: photoUrl)) { image in
+                                                                image.resizable().aspectRatio(contentMode: .fill)
+                                                            } placeholder: {
+                                                                Color.slate100
+                                                            }
+                                                            .frame(width: 80, height: 80)
+                                                            .cornerRadius(8)
+                                                            .clipped()
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .padding(.vertical, 4)
+                                        if idx < section.items.count - 1 { Divider() }
+                                    }
+                                }
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .shadow(color: .black.opacity(0.05), radius: 4)
+                            }
+                        }
+                        .padding()
+                    } else {
+                        // Fallback: still show PDF link even without structured data
+                        VStack(spacing: 16) {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 48))
+                                .foregroundColor(.green)
+                            Text("Audit Submitted")
+                                .font(.headline)
+                            if let pdfUrl = report.pdfUrl, let url = URL(string: pdfUrl) {
+                                Link("Open PDF Report →", destination: url)
+                                    .font(.body.bold())
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                        .padding(32)
+                    }
+                }
+            }
+            .background(Color.white)
+            .cornerRadius(16)
+            .shadow(radius: 20)
+            .padding()
+        }
+    }
+    
+    @ViewBuilder
+    func userStatusDisplay(status: Answer.AnswerStatus?) -> some View {
+        if let s = status {
+            if s.isPass {
+                Text("✓ Attributes Met")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.green)
+            } else if s.isFail {
+                Text("✗ Attributes NOT Met")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.red)
+            } else if s.isNA {
+                Text("N/A")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.slate400)
+            } else {
+                Text("No Answer")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(.slate300)
+                    .italic()
+            }
+        } else {
+            Text("No Answer")
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(.slate300)
+                .italic()
+        }
+    }
+    
     // MARK: - Empty State
     
     var emptyState: some View {
@@ -128,14 +328,11 @@ struct DashboardView: View {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 64))
                 .foregroundColor(.slate400)
-            
             Text("No audits found")
                 .font(.headline)
-            
             Text("Start one above!")
                 .font(.subheadline)
                 .foregroundColor(.slate500)
-            
             Button("Start New Audit") {
                 showNewAuditModal = true
             }
@@ -143,29 +340,9 @@ struct DashboardView: View {
         }
         .padding()
     }
-    
-    // MARK: - Error View
-    
-    func errorView(error: Error) -> some View {
-        VStack(spacing: 16) {
-            Text("Error: \(error.localizedDescription)")
-                .font(.subheadline)
-                .foregroundColor(.red)
-                .padding()
-                .background(Color.red.opacity(0.05))
-                .cornerRadius(8)
-            
-            Button("Retry") {
-                Task { await store.refreshAudits() }
-            }
-            .font(.body.bold())
-            .foregroundColor(.red)
-        }
-        .padding()
-    }
 }
 
-// MARK: - Audit Row (matches web's audit card with progress bar, status badge, report link)
+// MARK: - Audit Row (matches web's audit card)
 
 struct AuditRow: View {
     let audit: AuditSummary
@@ -173,89 +350,100 @@ struct AuditRow: View {
     let onToggleSelection: () -> Void
     let onTap: () -> Void
     
-    func parseDate(_ dateString: String) -> Date {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter.date(from: dateString) ?? Date()
-    }
-    
     var body: some View {
-        HStack(spacing: 16) {
-            // Selection Toggle
+        HStack(spacing: 12) {
             Button(action: onToggleSelection) {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .foregroundColor(isSelected ? .blue : .slate400)
-                    .font(.title3)
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.blue : Color.white)
+                        .frame(width: 24, height: 24)
+                        .overlay(Circle().stroke(isSelected ? Color.blue : Color.slate300, lineWidth: 1.5))
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Main Content Area (Tappable)
             Button(action: onTap) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text(audit.location)
-                            .font(.headline)
-                            .foregroundColor(.primary)
+                            .font(.subheadline.bold())
+                            .foregroundColor(.slate800)
+                            .lineLimit(1)
                         Spacer()
                         StatusBadge(status: audit.status)
                     }
                     
-                    HStack {
+                    HStack(spacing: 4) {
                         Image(systemName: "clock")
                             .font(.system(size: 10))
-                        Text(parseDate(audit.lastUpdated), style: .date)
+                        Text(formatDate(audit.lastUpdated))
                             .font(.caption)
                     }
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.slate500)
                     
-                    // Progress Bar (matches web)
-                    VStack(spacing: 4) {
-                        HStack {
-                            Text("Progress")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.slate600)
-                            Spacer()
-                            Text("\(audit.progress)%")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundColor(.slate600)
-                        }
-                        
+                    // Progress bar
+                    HStack(spacing: 8) {
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
-                                RoundedRectangle(cornerRadius: 4)
+                                RoundedRectangle(cornerRadius: 3)
                                     .fill(Color.slate100)
                                     .frame(height: 6)
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.blue)
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(audit.progress == 100 ? Color.green : Color.blue)
                                     .frame(width: geo.size.width * CGFloat(audit.progress) / 100.0, height: 6)
                             }
                         }
                         .frame(height: 6)
+                        
+                        Text("\(audit.progress)%")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.slate600)
+                            .frame(width: 32, alignment: .trailing)
                     }
                     
-                    // Report link (matches web)
-                    if audit.status == "Completed" && audit.reportUrl != nil {
-                        HStack {
-                            Spacer()
-                            Text("View Report →")
-                                .font(.caption.bold())
-                                .foregroundColor(.blue)
+                    if audit.reportUrl != nil {
+                        HStack(spacing: 2) {
+                            Image(systemName: "doc.text")
+                                .font(.system(size: 10))
+                            Text("PDF Available")
+                                .font(.system(size: 10, weight: .bold))
                         }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.green.opacity(0.1))
+                        .foregroundColor(.green)
+                        .cornerRadius(4)
                     }
                 }
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding()
+        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color.white)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSelected ? Color.blue : Color.slate100, lineWidth: isSelected ? 2 : 1)
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isSelected ? Color.blue : Color.slate200, lineWidth: isSelected ? 2 : 1)
                 )
         )
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+    }
+    
+    func formatDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) {
+            let df = DateFormatter()
+            df.dateStyle = .medium
+            df.timeStyle = .short
+            return df.string(from: date)
+        }
+        return dateString
     }
 }
 
@@ -316,7 +504,6 @@ struct NewAuditFormView: View {
     }
 }
 
-
 // MARK: - Admin Dashboard (matches web's AdminDashboard.jsx with detail modal + lazy loading)
 
 struct AdminDashboardView: View {
@@ -345,7 +532,7 @@ struct AdminDashboardView: View {
                         ProgressView("Loading Reports...")
                         Spacer()
                     } else if store.adminReports.isEmpty {
-                        emptyState
+                        adminEmptyState
                     } else {
                         reportList
                     }
@@ -424,7 +611,7 @@ struct AdminDashboardView: View {
                 .listRowBackground(Color.clear)
             }
             
-            // Lazy Loading: "Load More" button (matches web)
+            // Lazy Loading: "Load More" button
             if store.adminHasMore {
                 Button(action: {
                     Task { await store.fetchMoreAdminReports() }
@@ -457,9 +644,7 @@ struct AdminDashboardView: View {
         }
     }
     
-    // MARK: - Empty State
-    
-    var emptyState: some View {
+    var adminEmptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
@@ -471,7 +656,7 @@ struct AdminDashboardView: View {
         .padding()
     }
     
-    // MARK: - Admin Detail Modal (matches web's report detail popup)
+    // MARK: - Admin Detail Modal
     
     func adminDetailModal(report: Audit) -> some View {
         ZStack {
@@ -480,7 +665,6 @@ struct AdminDashboardView: View {
                 .onTapGesture { store.selectedAdminReport = nil }
             
             VStack(spacing: 0) {
-                // Header
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(report.metadata?.mauze ?? "Unknown Kitchen")
@@ -522,7 +706,6 @@ struct AdminDashboardView: View {
                 
                 Divider()
                 
-                // Detail Content
                 if store.isLoadingDetails {
                     Spacer()
                     ProgressView("Loading details...")
@@ -530,7 +713,6 @@ struct AdminDashboardView: View {
                 } else {
                     ScrollView {
                         if let answers = report.answers, !answers.isEmpty {
-                            // Structured view: group by checklist sections
                             VStack(spacing: 16) {
                                 ForEach(ChecklistData.allSections) { section in
                                     VStack(alignment: .leading, spacing: 8) {
@@ -556,15 +738,14 @@ struct AdminDashboardView: View {
                                                         .foregroundColor(ans?.value != nil ? .slate800 : .slate300)
                                                         .italic(ans?.value == nil)
                                                 } else {
-                                                    statusDisplay(status: ans?.status)
+                                                    adminStatusDisplay(status: ans?.status)
                                                 }
                                                 
-                                                // Show photos if any
                                                 if let photos = ans?.photos, !photos.isEmpty {
                                                     ScrollView(.horizontal, showsIndicators: false) {
                                                         HStack(spacing: 8) {
-                                                            ForEach(photos, id: \.self) { url in
-                                                                AsyncImage(url: URL(string: url)) { image in
+                                                            ForEach(photos, id: \.self) { photoUrl in
+                                                                AsyncImage(url: URL(string: photoUrl)) { image in
                                                                     image.resizable().aspectRatio(contentMode: .fill)
                                                                 } placeholder: {
                                                                     Color.slate100
@@ -578,10 +759,7 @@ struct AdminDashboardView: View {
                                                 }
                                             }
                                             .padding(.vertical, 4)
-                                            
-                                            if idx < section.items.count - 1 {
-                                                Divider()
-                                            }
+                                            if idx < section.items.count - 1 { Divider() }
                                         }
                                     }
                                     .padding()
@@ -599,9 +777,11 @@ struct AdminDashboardView: View {
                                 Text("No structured data available")
                                     .font(.headline)
                                     .foregroundColor(.slate600)
-                                Text("This report may have been created with an older version.")
-                                    .font(.caption)
-                                    .foregroundColor(.slate400)
+                                if let pdfUrl = report.pdfUrl, let url = URL(string: pdfUrl) {
+                                    Link("Open PDF Report →", destination: url)
+                                        .font(.body.bold())
+                                        .foregroundColor(.blue)
+                                }
                             }
                             .padding(32)
                         }
@@ -616,7 +796,7 @@ struct AdminDashboardView: View {
     }
     
     @ViewBuilder
-    func statusDisplay(status: Answer.AnswerStatus?) -> some View {
+    func adminStatusDisplay(status: Answer.AnswerStatus?) -> some View {
         if let s = status {
             if s.isPass {
                 Text("Attributes Met")
@@ -655,15 +835,12 @@ struct AdminReportRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            // Selection checkbox
             Button(action: onToggle) {
                 ZStack {
                     Circle()
                         .fill(isSelected ? Color.blue : Color.white)
                         .frame(width: 24, height: 24)
-                        .overlay(
-                            Circle().stroke(isSelected ? Color.blue : Color.slate300, lineWidth: 1.5)
-                        )
+                        .overlay(Circle().stroke(isSelected ? Color.blue : Color.slate300, lineWidth: 1.5))
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(.system(size: 12, weight: .bold))
@@ -673,7 +850,6 @@ struct AdminReportRow: View {
             }
             .buttonStyle(PlainButtonStyle())
             
-            // Report content
             Button(action: onTap) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -681,9 +857,7 @@ struct AdminReportRow: View {
                             .font(.subheadline.bold())
                             .foregroundColor(.slate800)
                             .lineLimit(1)
-                        
                         Spacer()
-                        
                         if report.reportUrl != nil {
                             HStack(spacing: 2) {
                                 Image(systemName: "doc.text")
@@ -703,7 +877,6 @@ struct AdminReportRow: View {
                         .font(.caption)
                         .foregroundColor(.slate500)
                     
-                    // Progress bar
                     HStack(spacing: 8) {
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {

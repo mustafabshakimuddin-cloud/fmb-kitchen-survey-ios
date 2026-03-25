@@ -16,15 +16,10 @@ struct ContentView: View {
                 }
             } else if store.userId.isEmpty {
                 LoginView()
-            } else if let audit = store.currentAudit {
-                if (audit.status == "submitted" || audit.status == "Completed"), let pdfUrl = audit.pdfUrl, let url = URL(string: pdfUrl) {
-                    SafariViewWrapper(url: url) {
-                        store.clearCurrentAudit()
-                    }
-                    .ignoresSafeArea()
-                } else {
-                    SurveyWizardView()
-                }
+            } else if store.currentAudit != nil {
+                // currentAudit is only set for in-progress audits now
+                // (completed audits are handled by DashboardView's detail modal)
+                SurveyWizardView()
             } else {
                 DashboardView()
             }
