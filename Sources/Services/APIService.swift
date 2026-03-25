@@ -50,7 +50,7 @@ class APIService {
             throw APIError.invalidResponse
         }
         
-        // The API returns { audit: { data: { metadata, answers, ... } } }
+        // First try strict decoding
         struct AuditResponse: Codable {
             let audit: AuditContainer
         }
@@ -58,11 +58,65 @@ class APIService {
             let data: Audit
         }
         
-        let result = try JSONDecoder().decode(AuditResponse.self, from: data)
-        var audit = result.audit.data
-        if audit.id == nil {
-            audit.id = auditId
+        do {
+            let result = try JSONDecoder().decode(AuditResponse.self, from: data)
+            var audit = result.audit.data
+            if audit.id == nil { audit.id = auditId }
+            return audit
+        } catch {
+            print("⚠️ Strict decode failed: \(error). Falling back to manual parsing.")
         }
+        
+        // Fallback: manual JSON parsing for resilience
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let auditWrapper = json["audit"] as? [String: Any],
+              let auditData = auditWrapper["data"] as? [String: Any] else {
+            throw APIError.invalidResponse
+        }
+        
+        // Extract critical fields manually
+        var audit = Audit(
+            id: auditData["id"] as? String ?? auditId,
+            userId: auditData["userId"] as? String,
+            metadata: nil,
+            answers: nil,
+            progress: auditData["progress"] as? Int,
+            status: auditData["status"] as? String,
+            createdAt: auditData["timestamp"] as? String,
+            updatedAt: auditData["updatedAt"] as? String,
+            pdfUrl: auditData["pdfUrl"] as? String
+        )
+        
+        // Try to decode metadata
+        if let metaDict = auditData["metadata"] as? [String: Any] {
+            let its: String?
+            if let s = metaDict["its"] as? String { its = s }
+            else if let i = metaDict["its"] as? Int { its = String(i) }
+            else { its = nil }
+            audit.metadata = AuditMetadata(its: its, mauze: metaDict["mauze"] as? String)
+        }
+        
+        // Try to decode answers one-by-one (skip any that fail)
+        if let answersDict = auditData["answers"] as? [String: Any] {
+            var parsed: [String: Answer] = [:]
+            for (key, val) in answersDict {
+                guard let ansDict = val as? [String: Any] else { continue }
+                
+                var status: Answer.AnswerStatus? = nil
+                if let s = ansDict["status"] as? String {
+                    status = .string(s)
+                } else if let b = ansDict["status"] as? Bool {
+                    status = .bool(b)
+                }
+                
+                let value = ansDict["value"] as? String
+                let photos = ansDict["photos"] as? [String]
+                
+                parsed[key] = Answer(status: status, value: value, photos: photos)
+            }
+            audit.answers = parsed
+        }
+        
         return audit
     }
     
