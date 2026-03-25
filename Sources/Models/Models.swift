@@ -165,6 +165,12 @@ struct ChatMessage: Identifiable, Codable {
     }
 }
 
+struct AuthSession: Codable {
+    let token: String
+    let role: String
+    let userId: String?
+}
+
 extension Color {
     static let slate50 = Color(hex: "F8FAFC")
     static let slate100 = Color(hex: "F1F5F9")

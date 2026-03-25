@@ -4,6 +4,7 @@ struct LoginView: View {
     @EnvironmentObject var store: SurveyStore
     @State private var its: String = ""
     @State private var isLoading = false
+    @State private var error = ""
     
     var body: some View {
         NavigationView {
@@ -70,6 +71,12 @@ struct LoginView: View {
                             .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
                         }
                         .disabled(its.count < 8 || isLoading)
+
+                        if !error.isEmpty {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
                         
                         NavigationLink(destination: AdminLoginView()) {
                             Text("Login as Admin")
@@ -94,11 +101,22 @@ struct LoginView: View {
     }
     
     func handleLogin() {
+        let normalizedIts = its.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard normalizedIts.range(of: #"^\d{8,}$"#, options: .regularExpression) != nil else {
+            error = "Enter a valid ITS number with at least 8 digits."
+            return
+        }
+
+        error = ""
         isLoading = true
-        // Simulate login
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            store.userId = its
-            isLoading = false
+        Task {
+            let success = await store.loginUser(userId: normalizedIts)
+            await MainActor.run {
+                isLoading = false
+                if !success {
+                    error = "Login failed. Please try again."
+                }
+            }
         }
     }
 }
@@ -188,10 +206,9 @@ struct AdminLoginView: View {
                 if success {
                     dismiss()
                 } else {
-                    error = "Invalid admin password"
+                    error = "Admin login failed"
                 }
             }
         }
     }
 }
-

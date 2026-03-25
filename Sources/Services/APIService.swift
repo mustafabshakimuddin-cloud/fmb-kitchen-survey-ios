@@ -11,8 +11,82 @@ class APIService {
     static let shared = APIService()
     private let baseURL = Constants.cloudflareApiUrl
     private let session = URLSession.shared
+    private let authTokenKey = "fmb_audit_token"
     
     private init() {}
+
+    private var authToken: String? {
+        UserDefaults.standard.string(forKey: authTokenKey)
+    }
+
+    private func makeRequest(
+        url: URL,
+        method: String = "GET",
+        contentType: String? = nil,
+        body: Data? = nil,
+        includeAuth: Bool = true
+    ) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        if let contentType {
+            request.setValue(contentType, forHTTPHeaderField: "Content-Type")
+        }
+        if includeAuth, let authToken {
+            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
+        request.httpBody = body
+        return request
+    }
+
+    private func decodeAPIError(from data: Data, fallback: String = "Request failed") -> APIError {
+        if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let error = json["error"] as? String {
+            return .serverError(error)
+        }
+        return .serverError(fallback)
+    }
+
+    func login(userId: String) async throws -> AuthSession {
+        let payload = ["action": "login", "userId": userId]
+        let request = makeRequest(
+            url: URL(string: baseURL)!,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: payload),
+            includeAuth: false
+        )
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Login failed")
+        }
+
+        return try JSONDecoder().decode(AuthSession.self, from: data)
+    }
+
+    func loginAdmin(password: String) async throws -> AuthSession {
+        let payload = ["action": "adminLogin", "password": password]
+        let request = makeRequest(
+            url: URL(string: baseURL)!,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: payload),
+            includeAuth: false
+        )
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Admin login failed")
+        }
+
+        return try JSONDecoder().decode(AuthSession.self, from: data)
+    }
     
     // MARK: - Audits
     
@@ -22,10 +96,14 @@ class APIService {
             URLQueryItem(name: "action", value: "list"),
             URLQueryItem(name: "userId", value: userId)
         ]
-        
-        let (data, response) = try await session.data(from: components.url!)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+
+        let request = makeRequest(url: components.url!)
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Failed to fetch audits")
         }
         
         struct AuditSummaryListResponse: Codable {
@@ -43,9 +121,13 @@ class APIService {
             URLQueryItem(name: "auditId", value: auditId)
         ]
         
-        let (data, response) = try await session.data(from: components.url!)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+        let request = makeRequest(url: components.url!)
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Failed to fetch audit")
         }
         
         // First try strict decoding
@@ -131,14 +213,19 @@ class APIService {
             ]
         ]
         
-        var request = URLRequest(url: URL(string: baseURL)!)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-        
+        let request = makeRequest(
+            url: URL(string: baseURL)!,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: payload)
+        )
+
         let (data, response) = try await session.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Failed to create audit")
         }
         
         struct CreateResponse: Codable {
@@ -173,14 +260,19 @@ class APIService {
             ]
         ]
         
-        var request = URLRequest(url: URL(string: baseURL)!)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-        
-        let (_, response) = try await session.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+        let request = makeRequest(
+            url: URL(string: baseURL)!,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: payload)
+        )
+
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Failed to save audit")
         }
     }
     
@@ -195,14 +287,19 @@ class APIService {
             "pdfUrl": pdfUrl
         ]
         
-        var request = URLRequest(url: URL(string: baseURL)!)
-        request.httpMethod = "POST"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
-        
+        let request = makeRequest(
+            url: URL(string: baseURL)!,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: payload)
+        )
+
         let (data, response) = try await session.data(for: request)
-        guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        guard httpResponse.statusCode == 200 else {
+            throw decodeAPIError(from: data, fallback: "Failed to submit audit")
         }
         
         // Check for server-side error
@@ -227,11 +324,13 @@ class APIService {
             "reportData": try JSONSerialization.jsonObject(with: JSONEncoder().encode(reportData))
         ]
         
-        var request = URLRequest(url: URL(string: gasURL)!)
-        request.httpMethod = "POST"
-        // Match web: text/plain to avoid CORS preflight
-        request.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        let request = makeRequest(
+            url: URL(string: gasURL)!,
+            method: "POST",
+            contentType: "text/plain;charset=utf-8",
+            body: try JSONSerialization.data(withJSONObject: payload),
+            includeAuth: false
+        )
         
         // Handle GAS redirects
         let config = URLSessionConfiguration.default
@@ -269,10 +368,13 @@ class APIService {
         
         guard let url = URL(string: Constants.gasScriptUrl) else { throw APIError.invalidURL }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        let request = makeRequest(
+            url: url,
+            method: "POST",
+            contentType: "text/plain;charset=utf-8",
+            body: try JSONSerialization.data(withJSONObject: payload),
+            includeAuth: false
+        )
         
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
@@ -314,10 +416,13 @@ class APIService {
         
         guard let url = URL(string: Constants.gasScriptUrl) else { return }
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.setValue("text/plain;charset=utf-8", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        let request = makeRequest(
+            url: url,
+            method: "POST",
+            contentType: "text/plain;charset=utf-8",
+            body: try? JSONSerialization.data(withJSONObject: payload),
+            includeAuth: false
+        )
         
         do {
             let _ = try await session.data(for: request)
@@ -345,10 +450,12 @@ class APIService {
             "reportIds": reports.map { $0.id }
         ]
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+        let request = makeRequest(
+            url: url,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: requestBody)
+        )
         
         print("🤖 Calling chat proxy with \(conversationMessages.count) messages, \(reports.count) reports")
         
@@ -381,10 +488,14 @@ class APIService {
     func fetchAllReports(page: Int) async throws -> ([AuditSummary], Bool) {
         let urlString = "\(baseURL)?action=getAllReports&page=\(page)"
         guard let url = URL(string: urlString) else { throw APIError.invalidURL }
-        
-        let (data, response) = try await session.data(from: url)
-        guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+
+        let request = makeRequest(url: url)
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw decodeAPIError(from: data, fallback: "Failed to fetch admin reports")
         }
         
         struct AdminReport: Codable {

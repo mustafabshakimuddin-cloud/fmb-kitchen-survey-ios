@@ -5,6 +5,9 @@ class SurveyStore: ObservableObject {
     @Published var userId: String = UserDefaults.standard.string(forKey: "fmb_audit_user") ?? "" {
         didSet { UserDefaults.standard.set(userId, forKey: "fmb_audit_user") }
     }
+    @Published var authToken: String = UserDefaults.standard.string(forKey: "fmb_audit_token") ?? "" {
+        didSet { UserDefaults.standard.set(authToken, forKey: "fmb_audit_token") }
+    }
     
     @Published var audits: [AuditSummary] = []
     @Published var currentAudit: Audit?
@@ -40,6 +43,10 @@ class SurveyStore: ObservableObject {
     private var lastSavedAnswers: [String: Answer]? = nil
     
     init() {
+        if authToken.isEmpty {
+            userId = ""
+            isAdmin = false
+        }
         setupAutoSave()
     }
     
@@ -321,16 +328,49 @@ class SurveyStore: ObservableObject {
         }
     }
     
+    func loginUser(userId: String) async -> Bool {
+        await MainActor.run { isLoading = true }
+        do {
+            let session = try await APIService.shared.login(userId: userId)
+            await MainActor.run {
+                self.authToken = session.token
+                self.userId = session.userId ?? userId
+                self.isAdmin = false
+                self.error = nil
+                self.isLoading = false
+            }
+            return true
+        } catch {
+            await MainActor.run {
+                self.error = error
+                self.isLoading = false
+            }
+            return false
+        }
+    }
+
     // MARK: - Admin Functions
     
     func loginAdmin(password: String) async -> Bool {
         await MainActor.run { isLoading = true }
-        let success = (password == "admin123")
-        await MainActor.run {
-            self.isAdmin = success
-            self.isLoading = false
+        do {
+            let session = try await APIService.shared.loginAdmin(password: password)
+            await MainActor.run {
+                self.authToken = session.token
+                self.userId = session.userId ?? ""
+                self.isAdmin = true
+                self.error = nil
+                self.isLoading = false
+            }
+            return true
+        } catch {
+            await MainActor.run {
+                self.error = error
+                self.isAdmin = false
+                self.isLoading = false
+            }
+            return false
         }
-        return success
     }
     
     func fetchAdminReports() async {
@@ -385,9 +425,11 @@ class SurveyStore: ObservableObject {
     
     func logout() {
         self.userId = ""
+        self.authToken = ""
         self.isAdmin = false
         self.audits = []
         self.adminReports = []
         self.selectedAdminReport = nil
+        self.currentAudit = nil
     }
 }
