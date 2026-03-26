@@ -150,7 +150,10 @@ extension Answer.AnswerStatus {
         }
     }
     var isNA: Bool {
-        if case .string(let s) = self { return s == "N/A" }
+        if case .string(let s) = self {
+            let lower = s.lowercased().trimmingCharacters(in: .whitespaces)
+            return lower == "na" || lower == "n/a"
+        }
         return false
     }
 }

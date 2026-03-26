@@ -230,11 +230,17 @@ struct DashboardView: View {
                                                 .textCase(.uppercase)
                                             
                                             if section.items[idx].type == .text {
-                                                let val = ans?.value?.trimmingCharacters(in: .whitespaces) ?? ""
-                                                Text(val.isEmpty ? "Not Filled" : val)
-                                                    .font(.subheadline.weight(.medium))
-                                                    .foregroundColor(val.isEmpty ? .slate300 : .slate800)
-                                                    .italic(val.isEmpty)
+                                                if let s = ans?.status, s.isNA {
+                                                    Text("N/A")
+                                                        .font(.subheadline.weight(.medium))
+                                                        .foregroundColor(.slate400)
+                                                } else {
+                                                    let val = ans?.value?.trimmingCharacters(in: .whitespaces) ?? ""
+                                                    Text(val.isEmpty ? "Not Filled" : val)
+                                                        .font(.subheadline.weight(.medium))
+                                                        .foregroundColor(val.isEmpty ? .slate300 : .slate800)
+                                                        .italic(val.isEmpty)
+                                                }
                                             } else {
                                                 userStatusDisplay(status: ans?.status)
                                             }
@@ -734,10 +740,17 @@ struct AdminDashboardView: View {
                                                     .textCase(.uppercase)
                                                 
                                                 if section.items[idx].type == .text {
-                                                    Text(ans?.value ?? "Not Filled")
-                                                        .font(.subheadline.weight(.medium))
-                                                        .foregroundColor(ans?.value != nil ? .slate800 : .slate300)
-                                                        .italic(ans?.value == nil)
+                                                    if let s = ans?.status, s.isNA {
+                                                        Text("N/A")
+                                                            .font(.subheadline.weight(.medium))
+                                                            .foregroundColor(.slate400)
+                                                    } else {
+                                                        let val = ans?.value?.trimmingCharacters(in: .whitespaces) ?? ""
+                                                        Text(val.isEmpty ? "Not Filled" : val)
+                                                            .font(.subheadline.weight(.medium))
+                                                            .foregroundColor(val.isEmpty ? .slate800 : .slate300)
+                                                            .italic(val.isEmpty)
+                                                    }
                                                 } else {
                                                     adminStatusDisplay(status: ans?.status)
                                                 }
