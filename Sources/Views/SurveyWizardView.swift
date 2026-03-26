@@ -550,26 +550,28 @@ struct ImageUploadView: View {
                         .background(Color.slate50)
                         .cornerRadius(10)
                     } else {
-                        // Camera Button
-                        Button(action: { isShowingCamera = true }) {
-                            VStack(spacing: 4) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .padding(8)
-                                    .background(Color.blue.opacity(0.1))
-                                    .clipShape(Circle())
-                                Text("Camera")
-                                    .font(.system(size: 10, weight: .bold))
+                        // Camera Button (Only show if available — prevents Simulator crashes)
+                        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                            Button(action: { isShowingCamera = true }) {
+                                VStack(spacing: 4) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .padding(8)
+                                        .background(Color.blue.opacity(0.1))
+                                        .clipShape(Circle())
+                                    Text("Camera")
+                                        .font(.system(size: 10, weight: .bold))
+                                }
+                                .frame(width: 64, height: 64)
+                                .background(Color.slate50)
+                                .foregroundColor(.blue)
+                                .cornerRadius(10)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(style: StrokeStyle(lineWidth: 1))
+                                        .foregroundColor(.blue.opacity(0.3))
+                                )
                             }
-                            .frame(width: 64, height: 64)
-                            .background(Color.slate50)
-                            .foregroundColor(.blue)
-                            .cornerRadius(10)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(style: StrokeStyle(lineWidth: 1))
-                                    .foregroundColor(.blue.opacity(0.3))
-                            )
                         }
                         
                         // Gallery Button (PhotosPicker)
