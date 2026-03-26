@@ -30,7 +30,7 @@ struct LoginView: View {
                         
                         Text("Smart Kitchen Certification")
                             .font(.subheadline)
-                            .foregroundColor(.slate400)
+                            .foregroundColor(Theme.textMuted)
                     }
                     .padding(.top, 60)
                     
@@ -65,7 +65,7 @@ struct LoginView: View {
                             }
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(its.count >= 8 ? Color.blue : Color.slate600)
+                            .background(its.count >= 8 ? Color.blue : Theme.textMuted.opacity(0.3))
                             .foregroundColor(.white)
                             .cornerRadius(12)
                             .shadow(color: .blue.opacity(0.3), radius: 10, x: 0, y: 5)
@@ -81,7 +81,7 @@ struct LoginView: View {
                         NavigationLink(destination: AdminLoginView()) {
                             Text("Login as Admin")
                                 .font(.footnote)
-                                .foregroundColor(.slate500)
+                                .foregroundColor(Theme.textMuted)
                                 .frame(maxWidth: .infinity)
                         }
                         .padding(.top, 10)
@@ -92,7 +92,7 @@ struct LoginView: View {
                     
                     Text("v1.0.0 Native")
                         .font(.caption)
-                        .foregroundColor(.slate500)
+                        .foregroundColor(Theme.textMuted)
                         .padding(.bottom, 20)
                 }
             }
@@ -133,30 +133,30 @@ struct AdminLoginView: View {
             VStack(spacing: 12) {
                 Image(systemName: "lock.shield.fill")
                     .font(.system(size: 60))
-                    .foregroundColor(.slate800)
+                    .foregroundColor(Theme.textPrimary)
                 
                 Text("Admin Access")
                     .font(.title.bold())
-                    .foregroundColor(.slate900)
+                    .foregroundColor(Theme.textPrimary)
                 
                 Text("Please enter the admin password")
                     .font(.subheadline)
-                    .foregroundColor(.slate500)
+                    .foregroundColor(Theme.textSecondary)
             }
             .padding(.top, 40)
             
             VStack(alignment: .leading, spacing: 8) {
                 Text("Password")
                     .font(.caption.bold())
-                    .foregroundColor(.slate700)
+                    .foregroundColor(Theme.textSecondary)
                 
                 SecureField("••••••••", text: $password)
                     .padding()
-                    .background(Color.slate100)
+                    .background(Theme.secondaryBackground)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.slate200, lineWidth: 1)
+                            .stroke(Theme.border, lineWidth: 1)
                     )
             }
             
@@ -178,8 +178,8 @@ struct AdminLoginView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.slate900)
-                .foregroundColor(.white)
+                .background(Theme.textPrimary)
+                .foregroundColor(Theme.card)
                 .cornerRadius(12)
             }
             .disabled(isLoading || password.isEmpty)
@@ -188,7 +188,7 @@ struct AdminLoginView: View {
                 dismiss()
             }
             .font(.footnote)
-            .foregroundColor(.slate500)
+            .foregroundColor(Theme.textMuted)
             
             Spacer()
         }

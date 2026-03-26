@@ -103,11 +103,12 @@ class APIService {
     
     // MARK: - Audits
     
-    func fetchAudits(userId: String) async throws -> [AuditSummary] {
+    func fetchAudits(userId: String, page: Int = 1) async throws -> ([AuditSummary], Bool) {
         var components = URLComponents(string: baseURL)!
         components.queryItems = [
             URLQueryItem(name: "action", value: "list"),
-            URLQueryItem(name: "userId", value: userId)
+            URLQueryItem(name: "userId", value: userId),
+            URLQueryItem(name: "page", value: String(page))
         ]
 
         let request = makeRequest(url: components.url!)
@@ -121,10 +122,11 @@ class APIService {
         
         struct AuditSummaryListResponse: Codable {
             let audits: [AuditSummary]
+            let hasMore: Bool?
         }
         
         let result = try JSONDecoder().decode(AuditSummaryListResponse.self, from: data)
-        return result.audits
+        return (result.audits, result.hasMore ?? (result.audits.count >= 20))
     }
     
     func fetchAuditDetails(auditId: String) async throws -> Audit {

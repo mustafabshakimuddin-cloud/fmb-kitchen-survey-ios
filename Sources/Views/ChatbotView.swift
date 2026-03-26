@@ -44,7 +44,7 @@ struct ChatbotView: View {
                         .padding(.horizontal)
                 }
                 .padding(.vertical, 12)
-                .background(Color.white)
+                .background(Theme.card)
                 .shadow(color: .black.opacity(0.05), radius: 5, y: 5)
                 
                 // Chat Area
@@ -66,15 +66,15 @@ struct ChatbotView: View {
                 HStack(spacing: 12) {
                     TextField("Ask about these reports...", text: $input)
                         .padding(10)
-                        .background(Color.slate50)
+                        .background(Theme.secondaryBackground)
                         .cornerRadius(20)
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.slate200, lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Theme.border, lineWidth: 1))
                         .disabled(isLoading || selectedAudits.isEmpty)
                     
                     Button(action: sendMessage) {
                         ZStack {
                             Circle()
-                                .fill(input.isEmpty || isLoading || selectedAudits.isEmpty ? Color.slate400 : Color.blue)
+                                .fill(input.isEmpty || isLoading || selectedAudits.isEmpty ? Theme.textMuted : Color.blue)
                                 .frame(width: 40, height: 40)
                             
                             if isLoading {
@@ -89,7 +89,7 @@ struct ChatbotView: View {
                     .disabled(input.isEmpty || isLoading || selectedAudits.isEmpty)
                 }
                 .padding()
-                .background(Color.white)
+                .background(Theme.card)
             }
             .navigationTitle("AI Assistant")
             .navigationBarTitleDisplayMode(.inline)
@@ -150,8 +150,8 @@ struct ChatBubble: View {
                 
                 Text(message.text)
                     .padding(12)
-                    .background(message.role == "user" ? Color.blue : Color.white)
-                    .foregroundColor(message.role == "user" ? .white : .primary)
+                    .background(message.role == "user" ? Color.blue : Theme.card)
+                    .foregroundColor(message.role == "user" ? .white : Theme.textPrimary)
                     .cornerRadius(16)
                     .shadow(color: .black.opacity(0.05), radius: 2)
             }

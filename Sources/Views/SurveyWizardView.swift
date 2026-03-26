@@ -28,10 +28,10 @@ struct SurveyWizardView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(currentSection.title)
                                         .font(.title2.bold())
-                                        .foregroundColor(.slate900)
+                                        .foregroundColor(Theme.textPrimary)
                                     Text("Please answer all questions below.")
                                         .font(.subheadline)
-                                        .foregroundColor(.slate500)
+                                        .foregroundColor(Theme.textSecondary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
@@ -83,7 +83,7 @@ struct SurveyWizardView: View {
                                 .scaleEffect(0.8)
                             Text("Saving...")
                                 .font(.subheadline)
-                                .foregroundColor(.slate400)
+                                .foregroundColor(Theme.textMuted)
                         }
                     } else {
                         Button("Save & Exit") {
@@ -119,17 +119,17 @@ struct SurveyWizardView: View {
                     HStack {
                         Text("\(currentSectionIndex + 1). \(currentSection.title)")
                             .font(.subheadline.bold())
-                            .foregroundColor(.slate700)
+                            .foregroundColor(Theme.textPrimary)
                             .lineLimit(1)
                         Image(systemName: "chevron.down")
                             .font(.caption)
-                            .foregroundColor(.slate400)
+                            .foregroundColor(Theme.textMuted)
                     }
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.white)
+                    .background(Theme.card)
                     .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate200, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.border, lineWidth: 1))
                     .shadow(color: .black.opacity(0.05), radius: 2)
                 }
                 
@@ -143,11 +143,11 @@ struct SurveyWizardView: View {
                             .frame(width: 6, height: 6)
                         Text(store.isSaving ? "Saving..." : "Saved")
                             .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.slate400)
+                            .foregroundColor(Theme.textMuted)
                     }
                     Text("\(progress)% Done")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundColor(.slate500)
+                        .foregroundColor(Theme.textSecondary)
                 }
             }
             
@@ -155,7 +155,7 @@ struct SurveyWizardView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color.slate200)
+                        .fill(Theme.border.opacity(0.3))
                         .frame(height: 6)
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color.blue)
@@ -166,7 +166,7 @@ struct SurveyWizardView: View {
             .frame(height: 6)
         }
         .padding()
-        .background(Color.slate50.opacity(0.95))
+        .background(Theme.background.opacity(0.95))
     }
     
     
@@ -217,10 +217,10 @@ struct SurveyWizardView: View {
                         .font(.body.weight(.semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.white)
-                        .foregroundColor(.slate700)
+                        .background(Theme.card)
+                        .foregroundColor(Theme.textPrimary)
                         .cornerRadius(12)
-                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.slate200, lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Theme.border, lineWidth: 1))
                         .shadow(color: .black.opacity(0.05), radius: 4)
                     }
                 }
@@ -263,7 +263,7 @@ struct SurveyWizardView: View {
         }
         .padding()
         .background(
-            Color.white
+            Theme.background
                 .shadow(color: .black.opacity(0.1), radius: 8, y: -4)
         )
     }
@@ -287,17 +287,17 @@ struct SurveyWizardView: View {
                 
                 Text("Submitting Audit...")
                     .font(.title3.bold())
-                    .foregroundColor(.slate900)
+                    .foregroundColor(Theme.textPrimary)
                 
                 Text("Please wait while we generate your PDF report and finalize the submission.")
                     .font(.subheadline)
-                    .foregroundColor(.slate500)
+                    .foregroundColor(Theme.textSecondary)
                     .multilineTextAlignment(.center)
                 
                 // Animated progress bar
                 GeometryReader { geo in
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.slate100)
+                        .fill(Theme.border.opacity(0.1))
                         .frame(height: 8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 4)
@@ -310,7 +310,7 @@ struct SurveyWizardView: View {
                 .frame(height: 8)
             }
             .padding(32)
-            .background(Color.white)
+            .background(Theme.card)
             .cornerRadius(20)
             .shadow(radius: 20)
             .padding(40)
@@ -337,29 +337,29 @@ struct SurveyWizardView: View {
                 
                 Text("Incomplete Audit")
                     .font(.headline)
-                    .foregroundColor(.slate900)
+                    .foregroundColor(Theme.textPrimary)
                 
                 Text(store.validationError ?? "")
                     .font(.subheadline)
-                    .foregroundColor(.slate600)
+                    .foregroundColor(Theme.textSecondary)
                     .padding(12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.slate50)
+                    .background(Theme.secondaryBackground)
                     .cornerRadius(8)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate100, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.border, lineWidth: 1))
                 
                 Button(action: { store.dismissValidationError() }) {
                     Text("OK, I'll fix it")
                         .font(.body.bold())
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.slate900)
-                        .foregroundColor(.white)
+                        .background(Theme.textPrimary)
+                        .foregroundColor(Theme.card)
                         .cornerRadius(12)
                 }
             }
             .padding(24)
-            .background(Color.white)
+            .background(Theme.card)
             .cornerRadius(20)
             .shadow(radius: 20)
             .padding(32)
@@ -426,7 +426,7 @@ struct QuestionCardView: View {
             // Question text
             Text(item.q)
                 .font(.body.bold())
-                .foregroundColor(.slate900)
+                .foregroundColor(Theme.textPrimary)
             
             if item.type == .status {
                 // Pass / Fail / N/A buttons (matches web's StatusButton)
@@ -449,9 +449,9 @@ struct QuestionCardView: View {
                 ))
                 .frame(minHeight: 80)
                 .padding(8)
-                .background(Color.slate50)
+                .background(Theme.secondaryBackground)
                 .cornerRadius(8)
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.slate200, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Theme.border, lineWidth: 1))
             }
             
             // Image Upload Section — on ALL question types (matches web)
@@ -463,7 +463,7 @@ struct QuestionCardView: View {
             ))
         }
         .padding(16)
-        .background(Color.white)
+        .background(Theme.card)
         .cornerRadius(12)
         .shadow(color: .black.opacity(0.05), radius: 5)
     }
@@ -498,10 +498,10 @@ struct ImageUploadView: View {
                     .font(.caption)
                 Text("Photos")
                     .font(.caption.bold())
-                    .foregroundColor(.slate700)
+                    .foregroundColor(Theme.textPrimary)
                 Text("(\(photos.count) attached)")
                     .font(.caption)
-                    .foregroundColor(.slate400)
+                    .foregroundColor(Theme.textMuted)
             }
             
             ScrollView(.horizontal, showsIndicators: false) {
@@ -514,10 +514,10 @@ struct ImageUploadView: View {
                                 case .success(let image):
                                     image.resizable().aspectRatio(contentMode: .fill)
                                 case .failure:
-                                    Color.slate100
-                                        .overlay(Image(systemName: "photo").foregroundColor(.slate400))
+                                    Theme.border.opacity(0.1)
+                                        .overlay(Image(systemName: "photo").foregroundColor(Theme.textMuted))
                                 default:
-                                    Color.slate100.overlay(ProgressView())
+                                    Theme.border.opacity(0.1).overlay(ProgressView())
                                 }
                             }
                             .frame(width: 64, height: 64)
@@ -547,7 +547,7 @@ struct ImageUploadView: View {
                                 .scaleEffect(0.8)
                         }
                         .frame(width: 64, height: 64)
-                        .background(Color.slate50)
+                        .background(Theme.secondaryBackground)
                         .cornerRadius(10)
                     } else {
                         // Camera Button (Only show if available — prevents Simulator crashes)
@@ -563,7 +563,7 @@ struct ImageUploadView: View {
                                         .font(.system(size: 10, weight: .bold))
                                 }
                                 .frame(width: 64, height: 64)
-                                .background(Color.slate50)
+                                .background(Theme.card)
                                 .foregroundColor(.blue)
                                 .cornerRadius(10)
                                 .overlay(
@@ -580,19 +580,19 @@ struct ImageUploadView: View {
                                 Image(systemName: "photo.on.rectangle.angled")
                                     .font(.system(size: 16, weight: .medium))
                                     .padding(8)
-                                    .background(Color.slate100)
+                                    .background(Theme.secondaryBackground)
                                     .clipShape(Circle())
                                 Text("Library")
                                     .font(.system(size: 10, weight: .bold))
                             }
                             .frame(width: 64, height: 64)
-                            .background(Color.slate50)
-                            .foregroundColor(.slate400)
+                            .background(Theme.secondaryBackground)
+                            .foregroundColor(Theme.textMuted)
                             .cornerRadius(10)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                    .foregroundColor(.slate300)
+                                    .foregroundColor(Theme.textMuted)
                             )
                         }
                     }
@@ -676,12 +676,12 @@ struct StatusButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? color.opacity(0.1) : Color.white)
-            .foregroundColor(isSelected ? color : .slate400)
+            .background(isSelected ? color.opacity(0.1) : Theme.card)
+            .foregroundColor(isSelected ? color : Theme.textMuted)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? color : Color.slate100, lineWidth: isSelected ? 2 : 1)
+                    .stroke(isSelected ? color : Theme.border, lineWidth: isSelected ? 2 : 1)
             )
             .scaleEffect(isSelected ? 1.02 : 1.0)
             .shadow(color: isSelected ? color.opacity(0.2) : .clear, radius: 4)

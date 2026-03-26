@@ -14,6 +14,11 @@ class SurveyStore: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var error: Error?
     
+    // Pagination for User Audits
+    @Published var auditPage: Int = 1
+    @Published var hasMoreAudits: Bool = false
+    @Published var isLoadingMoreAudits: Bool = false
+    
     // Auto-save state
     @Published var isSaving: Bool = false
     @Published var activeUploads: Int = 0
@@ -47,7 +52,28 @@ class SurveyStore: ObservableObject {
             userId = ""
             isAdmin = false
         }
+        
+        // Load cached audits for "Instant-On" startup
+        loadCachedAudits()
+        
         setupAutoSave()
+    }
+    
+    // MARK: - Local Caching (Instant-On Startup)
+    
+    private let auditsCacheKey = "fmb_cached_audits"
+    
+    private func saveAuditsToCache(_ audits: [AuditSummary]) {
+        if let data = try? JSONEncoder().encode(audits) {
+            UserDefaults.standard.set(data, forKey: auditsCacheKey)
+        }
+    }
+    
+    private func loadCachedAudits() {
+        if let data = UserDefaults.standard.data(forKey: auditsCacheKey),
+           let cached = try? JSONDecoder().decode([AuditSummary].self, from: data) {
+            self.audits = cached
+        }
     }
     
     // MARK: - Auto-Save (matches web's 2-second debounce)
@@ -193,14 +219,40 @@ class SurveyStore: ObservableObject {
     
     func refreshAudits() async {
         guard !userId.isEmpty else { return }
-        await MainActor.run { isLoading = true }
+        await MainActor.run { 
+            isLoading = true
+            auditPage = 1
+        }
         do {
-            let fetched = try await APIService.shared.fetchAudits(userId: userId)
-            await MainActor.run { self.audits = fetched }
+            let (fetched, more) = try await APIService.shared.fetchAudits(userId: userId, page: 1)
+            await MainActor.run { 
+                self.audits = fetched
+                self.hasMoreAudits = more
+                self.saveAuditsToCache(fetched)
+            }
         } catch {
             await MainActor.run { self.error = error }
         }
         await MainActor.run { isLoading = false }
+    }
+    
+    func fetchMoreAudits() async {
+        guard !userId.isEmpty && !isLoadingMoreAudits && hasMoreAudits else { return }
+        await MainActor.run { isLoadingMoreAudits = true }
+        
+        let nextPage = auditPage + 1
+        do {
+            let (fetched, more) = try await APIService.shared.fetchAudits(userId: userId, page: nextPage)
+            await MainActor.run {
+                self.audits.append(contentsOf: fetched)
+                self.auditPage = nextPage
+                self.hasMoreAudits = more
+            }
+        } catch {
+            print("Failed to fetch more audits: \(error)")
+        }
+        
+        await MainActor.run { isLoadingMoreAudits = false }
     }
     
     func createAudit(location: String) async -> String? {
