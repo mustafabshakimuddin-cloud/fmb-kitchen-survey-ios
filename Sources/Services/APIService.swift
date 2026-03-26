@@ -26,8 +26,21 @@ class APIService {
         body: Data? = nil,
         includeAuth: Bool = true
     ) -> URLRequest {
-        var request = URLRequest(url: url)
+        // Build V14: Force universal cache-buster on all native requests
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
+        var queryItems = components.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "_t", value: String(Int(Date().timeIntervalSince1970 * 1000))))
+        components.queryItems = queryItems
+        
+        var request = URLRequest(url: components.url!)
         request.httpMethod = method
+        
+        // Explicitly reject all caching at the URLSession level
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+        request.setValue("no-cache, no-store, must-revalidate", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
+        request.setValue("0", forHTTPHeaderField: "Expires")
+
         if let contentType {
             request.setValue(contentType, forHTTPHeaderField: "Content-Type")
         }
@@ -114,14 +127,20 @@ class APIService {
         return result.audits
     }
     
-    func fetchAuditDetails(auditId: String) async throws -> Audit {
-        var components = URLComponents(string: baseURL)!
-        components.queryItems = [
-            URLQueryItem(name: "action", value: "get"),
-            URLQueryItem(name: "auditId", value: auditId)
+        // Build V14: Switch to POST to guarantee fresh data from Cloudflare/Neon
+        let payload: [String: Any] = [
+            "action": "get",
+            "auditId": auditId,
+            "salt": Double.random(in: 0...1)
         ]
         
-        let request = makeRequest(url: components.url!)
+        let request = makeRequest(
+            url: URL(string: baseURL)!,
+            method: "POST",
+            contentType: "application/json",
+            body: try JSONSerialization.data(withJSONObject: payload)
+        )
+        
         let (data, response) = try await session.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
@@ -164,7 +183,8 @@ class APIService {
             status: auditData["status"] as? String,
             createdAt: auditData["timestamp"] as? String,
             updatedAt: auditData["updatedAt"] as? String,
-            pdfUrl: auditData["pdfUrl"] as? String
+            pdfUrl: auditData["pdfUrl"] as? String,
+            version: auditData["version"] as? Int
         )
         
         // Try to decode metadata
@@ -243,11 +263,13 @@ class APIService {
     
     // MARK: - Save Progress
     
-    func saveAudit(auditId: String, metadata: AuditMetadata, answers: [String: Answer], progress: Int) async throws {
+    func saveAudit(auditId: String, metadata: AuditMetadata, answers: [String: Answer], progress: Int, version: Int = 0) async throws {
         let payload: [String: Any] = [
             "action": "save",
             "auditId": auditId,
             "progress": progress,
+            "version": version,
+            "salt": Double.random(in: 0...1), // Build V14: Break edge deduplication
             "data": [
                 "metadata": ["its": metadata.its ?? "", "mauze": metadata.mauze ?? ""],
                 "answers": answers.reduce(into: [String: Any]()) { dict, pair in

@@ -75,13 +75,20 @@ class SurveyStore: ObservableObject {
     private func saveProgress(auditId: String, metadata: AuditMetadata, answers: [String: Answer]) async {
         await MainActor.run { self.isSaving = true }
         let progress = calculateProgress()
+        
+        // Build V14: Increment version for optimistic concurrency
+        let nextVersion = (currentAudit?.version ?? 0) + 1
+        
         do {
             try await APIService.shared.saveAudit(
                 auditId: auditId,
                 metadata: metadata,
                 answers: answers,
-                progress: progress
+                progress: progress,
+                version: nextVersion
             )
+            // Update local version on success
+            await MainActor.run { self.currentAudit?.version = nextVersion }
         } catch {
             print("Auto-save failed: \(error)")
         }

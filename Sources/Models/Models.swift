@@ -10,6 +10,7 @@ struct Audit: Codable, Identifiable {
     var createdAt: String?
     var updatedAt: String?
     var pdfUrl: String?
+    var version: Int?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -21,6 +22,7 @@ struct Audit: Codable, Identifiable {
         case createdAt = "timestamp"
         case updatedAt
         case pdfUrl
+        case version
     }
 }
 
