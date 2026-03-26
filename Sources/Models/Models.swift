@@ -1,16 +1,16 @@
 import SwiftUI
 
 struct Audit: Codable, Identifiable {
-    var id: String?
-    var userId: String?
-    var metadata: AuditMetadata?
-    var answers: [String: Answer]?
-    var progress: Int?
-    var status: String?
-    var createdAt: String?
-    var updatedAt: String?
-    var pdfUrl: String?
-    var version: Int?
+    var id: String? = nil
+    var userId: String? = nil
+    var metadata: AuditMetadata? = nil
+    var answers: [String: Answer]? = nil
+    var progress: Int? = nil
+    var status: String? = nil
+    var createdAt: String? = nil
+    var updatedAt: String? = nil
+    var pdfUrl: String? = nil
+    var version: Int? = nil
     
     enum CodingKeys: String, CodingKey {
         case id

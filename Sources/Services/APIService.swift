@@ -127,6 +127,7 @@ class APIService {
         return result.audits
     }
     
+    func fetchAuditDetails(auditId: String) async throws -> Audit {
         // Build V14: Switch to POST to guarantee fresh data from Cloudflare/Neon
         let payload: [String: Any] = [
             "action": "get",

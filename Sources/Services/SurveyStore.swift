@@ -275,8 +275,11 @@ class SurveyStore: ObservableObject {
             let missingText = missing != nil
                 ? "\n\nFirst missing item:\nSection: \(missing!.section.title)\nQuestion: \(missing!.question.q)"
                 : ""
+            
+            let finalCompleted = completed
+            let finalTotal = total
             await MainActor.run {
-                validationError = "Please complete all questions before submitting.\nAnswered: \(completed) / \(total)\(missingText)"
+                validationError = "Please complete all questions before submitting.\nAnswered: \(finalCompleted) / \(finalTotal)\(missingText)"
             }
             return
         }
