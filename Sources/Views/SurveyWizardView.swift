@@ -38,7 +38,7 @@ struct SurveyWizardView: View {
                                 .id("sectionTop")
                                 
                                 // Question Cards
-                                VStack(spacing: 16) {
+                                LazyVStack(spacing: 16) {
                                     ForEach(currentSection.items.indices, id: \.self) { idx in
                                         QuestionCardView(
                                             sectionId: currentSection.id,
@@ -443,7 +443,7 @@ struct QuestionCardView: View {
                 }
             } else {
                 // Text input
-                TextEditor(text: Binding(
+                DebouncedTextEditor(text: Binding(
                     get: { getAnswer().value ?? "" },
                     set: { setAnswer(value: $0) }
                 ))
@@ -601,8 +601,11 @@ struct ImageUploadView: View {
         }
         .fullScreenCover(isPresented: $isShowingCamera) {
             CameraPicker { image in
-                if let data = image.jpegData(compressionQuality: 0.7) {
-                    uploadImageData(data)
+                Task.detached {
+                    let scaled = image.size.width > 1200 ? (image.resized(toWidth: 1200) ?? image) : image
+                    if let data = scaled.jpegData(compressionQuality: 0.7) {
+                        await MainActor.run { uploadImageData(data) }
+                    }
                 }
             }
             .ignoresSafeArea()
@@ -631,7 +634,7 @@ struct ImageUploadView: View {
         isUploading = true
         store.registerUploadStart()
         
-        Task {
+        Task.detached {
             let base64 = data.base64EncodedString()
             let fileName = "ios_upload_\(UUID().uuidString).jpg"
             
@@ -653,7 +656,7 @@ struct ImageUploadView: View {
                     isUploading = false
                 }
             }
-            store.registerUploadEnd()
+            await MainActor.run { store.registerUploadEnd() }
         }
     }
 }
@@ -735,5 +738,59 @@ struct CameraPicker: UIViewControllerRepresentable {
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
             parent.dismiss()
         }
+    }
+}
+
+// MARK: - Image Resizing Extension
+extension UIImage {
+    func resized(toWidth width: CGFloat) -> UIImage? {
+        let canvasSize = CGSize(width: width, height: CGFloat(ceil(width/size.width * size.height)))
+        UIGraphicsBeginImageContextWithOptions(canvasSize, false, scale)
+        defer { UIGraphicsEndImageContext() }
+        draw(in: CGRect(origin: .zero, size: canvasSize))
+        return UIGraphicsGetImageFromCurrentImageContext()
+    }
+}
+import SwiftUI
+import Combine
+
+class TextDebouncer: ObservableObject {
+    @Published var input: String = ""
+    @Published var debouncedOutput: String = ""
+    private var cancellable: AnyCancellable?
+
+    init(initialValue: String, delay: TimeInterval = 0.15) {
+        self.input = initialValue
+        self.debouncedOutput = initialValue
+        
+        cancellable = $input
+            .dropFirst()
+            .debounce(for: .seconds(delay), scheduler: RunLoop.main)
+            .sink { [weak self] val in
+                self?.debouncedOutput = val
+            }
+    }
+}
+
+struct DebouncedTextEditor: View {
+    @Binding var text: String
+    @StateObject private var debouncer: TextDebouncer
+
+    init(text: Binding<String>) {
+        self._text = text
+        self._debouncer = StateObject(wrappedValue: TextDebouncer(initialValue: text.wrappedValue))
+    }
+
+    var body: some View {
+        TextEditor(text: $debouncer.input)
+            .onChange(of: debouncer.debouncedOutput) { newValue in
+                text = newValue
+            }
+            // Add iOS 17 onChange backwards compatibility fallback
+            .onAppear {
+                if debouncer.input != text {
+                    debouncer.input = text
+                }
+            }
     }
 }
