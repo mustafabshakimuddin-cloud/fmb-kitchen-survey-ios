@@ -19,6 +19,7 @@
 		80F56219F48D701D6B58283E /* GoogleGenerativeAI in Frameworks */ = {isa = PBXBuildFile; productRef = 9CDA146B03AC55FD5B6227EB /* GoogleGenerativeAI */; };
 		A338CAD05A49A0A66063D517 /* SurveyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB24FE9B8B23794C91A0AB6 /* SurveyStore.swift */; };
 		C1BC7DB7F9C0C8889FCEB7DD /* KitchenSurveyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */; };
+		501A2B3C4D5E6F7A8B9C0D1F /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501A2B3C4D5E6F7A8B9C0D1E /* Theme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -34,6 +35,7 @@
 		BCD25CB787D9CF9354D56EA3 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		C956112FC6FD369B92A405A6 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		E3CCED5B89C4639E11E7BC80 /* ChatbotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatbotView.swift; sourceTree = "<group>"; };
+		501A2B3C4D5E6F7A8B9C0D1E /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		FB2424D94385825A69ADF95B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -56,6 +58,14 @@
 				BCD25CB787D9CF9354D56EA3 /* Models.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		501A2B3C4D5E6F7A8B9C0D20 /* Styles */ = {
+			isa = PBXGroup;
+			children = (
+				501A2B3C4D5E6F7A8B9C0D1E /* Theme.swift */,
+			);
+			path = Styles;
 			sourceTree = "<group>";
 		};
 		9DB0A5EAA585FC847DF89E78 /* Products */ = {
@@ -83,6 +93,7 @@
 				9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */,
 				353866BE50493A14F79F4E35 /* Models */,
 				A6D6E053E3E2F7F6A5FB5B7E /* Services */,
+				501A2B3C4D5E6F7A8B9C0D20 /* Styles */,
 				F95E4F5E519AECF82854E2F5 /* Views */,
 			);
 			path = Sources;
@@ -177,6 +188,7 @@
 				17259C0743AE166B90E7B694 /* Models.swift in Sources */,
 				A338CAD05A49A0A66063D517 /* SurveyStore.swift in Sources */,
 				4EC73C1BB3DE4AFA794D62F4 /* SurveyWizardView.swift in Sources */,
+				501A2B3C4D5E6F7A8B9C0D1F /* Theme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
