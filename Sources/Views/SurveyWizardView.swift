@@ -5,6 +5,7 @@ struct SurveyWizardView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var store: SurveyStore
     @State private var currentSectionIndex = 0
+    @State private var isSavingAndExiting = false
     
     var sections: [SurveySection] { ChecklistData.allSections }
     var currentSection: SurveySection { sections[currentSectionIndex] }
@@ -76,10 +77,20 @@ struct SurveyWizardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Save & Exit") {
-                        saveAndExit()
+                    if isSavingAndExiting {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                            Text("Saving...")
+                                .font(.subheadline)
+                                .foregroundColor(.slate400)
+                        }
+                    } else {
+                        Button("Save & Exit") {
+                            saveAndExit()
+                        }
+                        .disabled(store.activeUploads > 0 || isSavingAndExiting)
                     }
-                    .disabled(store.activeUploads > 0)
                 }
             }
         }
@@ -363,6 +374,8 @@ struct SurveyWizardView: View {
         }
 
         Task {
+            await MainActor.run { isSavingAndExiting = true }
+            
             if let audit = store.currentAudit,
                let auditId = audit.id,
                let metadata = audit.metadata {
@@ -373,7 +386,9 @@ struct SurveyWizardView: View {
                     progress: store.calculateProgress()
                 )
             }
+            
             await MainActor.run {
+                isSavingAndExiting = false
                 store.clearCurrentAudit()
             }
         }
