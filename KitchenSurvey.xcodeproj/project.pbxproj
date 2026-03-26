@@ -20,6 +20,7 @@
 		A338CAD05A49A0A66063D517 /* SurveyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FB24FE9B8B23794C91A0AB6 /* SurveyStore.swift */; };
 		C1BC7DB7F9C0C8889FCEB7DD /* KitchenSurveyApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */; };
 		501A2B3C4D5E6F7A8B9C0D1F /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 501A2B3C4D5E6F7A8B9C0D1E /* Theme.swift */; };
+		501A2B3C4D5E6F7A8B9C0D23 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 501A2B3C4D5E6F7A8B9C0D21 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +37,7 @@
 		C956112FC6FD369B92A405A6 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		E3CCED5B89C4639E11E7BC80 /* ChatbotView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatbotView.swift; sourceTree = "<group>"; };
 		501A2B3C4D5E6F7A8B9C0D1E /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		501A2B3C4D5E6F7A8B9C0D21 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FB2424D94385825A69ADF95B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -49,6 +51,17 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXResourcesBuildPhase section */
+		501A2B3C4D5E6F7A8B9C0D22 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				501A2B3C4D5E6F7A8B9C0D23 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXGroup section */
 		353866BE50493A14F79F4E35 /* Models */ = {
@@ -90,6 +103,7 @@
 			isa = PBXGroup;
 			children = (
 				FB2424D94385825A69ADF95B /* Info.plist */,
+				501A2B3C4D5E6F7A8B9C0D21 /* Assets.xcassets */,
 				9D63C3378ECB696D31E2CE42 /* KitchenSurveyApp.swift */,
 				353866BE50493A14F79F4E35 /* Models */,
 				A6D6E053E3E2F7F6A5FB5B7E /* Services */,
@@ -128,6 +142,7 @@
 			buildPhases = (
 				7431A248BA012043CA5E9A5D /* Sources */,
 				B208740BE7868C875A6DE2DF /* Frameworks */,
+				501A2B3C4D5E6F7A8B9C0D22 /* Resources */,
 			);
 			buildRules = (
 			);
