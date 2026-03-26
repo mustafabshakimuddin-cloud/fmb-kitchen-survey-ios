@@ -1,18 +1,18 @@
 import SwiftUI
 
 extension Color {
-    static let slate50 = Color(hex: "F8FAFC")
-    static let slate100 = Color(hex: "F1F5F9")
-    static let slate200 = Color(hex: "E2E8F0")
-    static let slate300 = Color(hex: "CBD5E1")
-    static let slate400 = Color(hex: "94A3B8")
-    static let slate500 = Color(hex: "64748B")
-    static let slate600 = Color(hex: "475569")
-    static let slate700 = Color(hex: "334155")
-    static let slate800 = Color(hex: "1E293B")
-    static let slate900 = Color(hex: "0F172A")
+    static let slate50 = Color(hexString: "F8FAFC")
+    static let slate100 = Color(hexString: "F1F5F9")
+    static let slate200 = Color(hexString: "E2E8F0")
+    static let slate300 = Color(hexString: "CBD5E1")
+    static let slate400 = Color(hexString: "94A3B8")
+    static let slate500 = Color(hexString: "64748B")
+    static let slate600 = Color(hexString: "475569")
+    static let slate700 = Color(hexString: "334155")
+    static let slate800 = Color(hexString: "1E293B")
+    static let slate900 = Color(hexString: "0F172A")
     
-    init(hex: String) {
+    init(hexString: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)

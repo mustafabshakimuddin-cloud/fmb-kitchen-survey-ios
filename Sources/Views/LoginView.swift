@@ -24,7 +24,7 @@ struct LoginView: View {
 
     private var backgroundGradient: some View {
         LinearGradient(
-            gradient: Gradient(colors: [Color(hex: "0F172A"), Color(hex: "1E293B")]),
+            gradient: Gradient(colors: [Color(hexString: "0F172A"), Color(hexString: "1E293B")]),
             startPoint: .topLeading,
             endPoint: .bottomTrailing
         )
