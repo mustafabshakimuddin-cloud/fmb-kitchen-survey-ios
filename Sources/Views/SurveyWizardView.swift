@@ -471,6 +471,7 @@ struct ImageUploadView: View {
     @EnvironmentObject var store: SurveyStore
     @Binding var photos: [String]
     @State private var selectedItems: [PhotosPickerItem] = []
+    @State private var isShowingCamera = false
     @State private var isUploading = false
     
     var body: some View {
@@ -509,9 +510,11 @@ struct ImageUploadView: View {
                             
                             // Delete button (matches web's X button with Drive delete)
                             Button(action: {
-                                let photoUrl = photos[idx]
-                                photos.remove(at: idx) // Optimistic removal (matches web)
-                                Task { await APIService.shared.deletePhoto(photoUrl: photoUrl) }
+                                if idx < photos.count {
+                                    let photoUrl = photos[idx]
+                                    photos.remove(at: idx) // Optimistic removal (matches web)
+                                    Task { await APIService.shared.deletePhoto(photoUrl: photoUrl) }
+                                }
                             }) {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 16))
@@ -522,71 +525,115 @@ struct ImageUploadView: View {
                         }
                     }
                     
-                    // Add button
-                    PhotosPicker(selection: $selectedItems, maxSelectionCount: 5, matching: .images) {
+                    if isUploading {
                         VStack(spacing: 4) {
-                            if isUploading {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else {
-                                Image(systemName: "plus")
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        }
+                        .frame(width: 64, height: 64)
+                        .background(Color.slate50)
+                        .cornerRadius(10)
+                    } else {
+                        // Camera Button
+                        Button(action: { isShowingCamera = true }) {
+                            VStack(spacing: 4) {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 16, weight: .medium))
+                                    .padding(8)
+                                    .background(Color.blue.opacity(0.1))
+                                    .clipShape(Circle())
+                                Text("Camera")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .frame(width: 64, height: 64)
+                            .background(Color.slate50)
+                            .foregroundColor(.blue)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(style: StrokeStyle(lineWidth: 1))
+                                    .foregroundColor(.blue.opacity(0.3))
+                            )
+                        }
+                        
+                        // Gallery Button (PhotosPicker)
+                        PhotosPicker(selection: $selectedItems, maxSelectionCount: 5, matching: .images) {
+                            VStack(spacing: 4) {
+                                Image(systemName: "photo.on.rectangle.angled")
                                     .font(.system(size: 16, weight: .medium))
                                     .padding(8)
                                     .background(Color.slate100)
                                     .clipShape(Circle())
-                                Text("Add")
+                                Text("Library")
                                     .font(.system(size: 10, weight: .bold))
                             }
+                            .frame(width: 64, height: 64)
+                            .background(Color.slate50)
+                            .foregroundColor(.slate400)
+                            .cornerRadius(10)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [4]))
+                                    .foregroundColor(.slate300)
+                            )
                         }
-                        .frame(width: 64, height: 64)
-                        .background(Color.slate50)
-                        .foregroundColor(.slate400)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(style: StrokeStyle(lineWidth: 2, dash: [6]))
-                                .foregroundColor(.slate300)
-                        )
                     }
-                    .disabled(isUploading)
                 }
             }
         }
+        .fullScreenCover(isPresented: $isShowingCamera) {
+            CameraPicker { image in
+                if let data = image.jpegData(compressionQuality: 0.7) {
+                    uploadImageData(data)
+                }
+            }
+            .ignoresSafeArea()
+        }
         .onChange(of: selectedItems) { items in
-            uploadImages(items: items)
+            uploadImagesFromPicker(items: items)
         }
     }
     
-    private func uploadImages(items: [PhotosPickerItem]) {
+    private func uploadImagesFromPicker(items: [PhotosPickerItem]) {
         guard !items.isEmpty else { return }
-        isUploading = true
-        store.registerUploadStart()
         
         Task {
             for item in items {
                 if let data = try? await item.loadTransferable(type: Data.self) {
-                    let base64 = data.base64EncodedString()
-                    let fileName = "ios_upload_\(UUID().uuidString).jpg"
-                    
-                    do {
-                        let url = try await APIService.shared.uploadPhoto(
-                            fileName: fileName,
-                            mimeType: "image/jpeg",
-                            base64Data: base64
-                        )
-                        await MainActor.run {
-                            if !photos.contains(url) {
-                                photos.append(url)
-                            }
-                        }
-                    } catch {
-                        print("Upload failed: \(error)")
-                    }
+                    uploadImageData(data)
                 }
             }
             await MainActor.run {
-                isUploading = false
                 selectedItems = []
+            }
+        }
+    }
+    
+    private func uploadImageData(_ data: Data) {
+        isUploading = true
+        store.registerUploadStart()
+        
+        Task {
+            let base64 = data.base64EncodedString()
+            let fileName = "ios_upload_\(UUID().uuidString).jpg"
+            
+            do {
+                let url = try await APIService.shared.uploadPhoto(
+                    fileName: fileName,
+                    mimeType: "image/jpeg",
+                    base64Data: base64
+                )
+                await MainActor.run {
+                    if !photos.contains(url) {
+                        photos.append(url)
+                    }
+                    isUploading = false
+                }
+            } catch {
+                print("Upload failed: \(error)")
+                await MainActor.run {
+                    isUploading = false
+                }
             }
             store.registerUploadEnd()
         }
