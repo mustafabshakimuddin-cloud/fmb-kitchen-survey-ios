@@ -169,47 +169,8 @@ struct SurveyWizardView: View {
         .background(Color.slate50.opacity(0.95))
     }
     
-    // MARK: - Camera Picker (Native UIKit Wrapper)
-
-struct CameraPicker: UIViewControllerRepresentable {
-    @Environment(\.dismiss) var dismiss
-    var onImagePicked: (UIImage) -> Void
     
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.delegate = context.coordinator
-        picker.sourceType = .camera
-        picker.allowsEditing = false
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
-    }
-    
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        let parent: CameraPicker
-        
-        init(parent: CameraPicker) {
-            self.parent = parent
-        }
-        
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-            if let uiImage = info[.originalImage] as? UIImage {
-                parent.onImagePicked(uiImage)
-            }
-            parent.dismiss()
-        }
-        
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            parent.dismiss()
-        }
-    }
-}
-
-// MARK: - Navigation Bar
+    // MARK: - Navigation Bar
     
     var navigationBar: some View {
         VStack(spacing: 12) {
@@ -731,6 +692,46 @@ struct StatusButton: View {
         case "Pass": return "checkmark"
         case "Fail": return "xmark"
         default: return "minus"
+        }
+    }
+}
+
+// MARK: - Camera Picker (Native UIKit Wrapper)
+
+struct CameraPicker: UIViewControllerRepresentable {
+    @Environment(\.dismiss) var dismiss
+    var onImagePicked: (UIImage) -> Void
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.delegate = context.coordinator
+        picker.sourceType = .camera
+        picker.allowsEditing = false
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+    
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: CameraPicker
+        
+        init(parent: CameraPicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let uiImage = info[.originalImage] as? UIImage {
+                parent.onImagePicked(uiImage)
+            }
+            parent.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
         }
     }
 }
